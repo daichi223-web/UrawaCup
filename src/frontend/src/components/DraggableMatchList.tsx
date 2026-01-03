@@ -3,6 +3,7 @@
  * 研修試合・決勝トーナメントで使用
  */
 import { useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DndContext,
   DragEndEvent,
@@ -345,13 +346,16 @@ export default function DraggableMatchList({
           </div>
         </SortableContext>
 
-        <DragOverlay dropAnimation={null}>
-          {activeId && (
-            <div className="bg-primary-100 border-2 border-primary-500 rounded p-3 shadow-lg cursor-grabbing">
-              <span className="font-medium">{getActiveItem()}</span>
-            </div>
-          )}
-        </DragOverlay>
+        {createPortal(
+          <DragOverlay dropAnimation={null}>
+            {activeId && (
+              <div className="bg-primary-100 border-2 border-primary-500 rounded p-3 shadow-lg cursor-grabbing">
+                <span className="font-medium">{getActiveItem()}</span>
+              </div>
+            )}
+          </DragOverlay>,
+          document.body
+        )}
       </DndContext>
 
       <div className="text-xs text-gray-400 text-center mt-4">

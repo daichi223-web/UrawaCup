@@ -1,0 +1,15 @@
+[project]
+name = "agent-check"
+version = "1.0.0"
+description = "UrawaCup operations test agent using Claude Agent SDK"
+requires-python = ">=3.10"
+dependencies = [
+    "claude-agent-sdk",
+    "httpx>=0.25.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+agent-check = "agent_check:main"
+agent-investigate = "agent_investigate:main"
+agent-fix = "agent_fix:main"

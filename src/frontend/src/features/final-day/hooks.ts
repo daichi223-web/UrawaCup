@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { finalDayApi } from './api';
-import type { FinalMatch, SwapTeamsRequest } from './types';
+import type { SwapTeamsRequest } from './types';
 import { toFinalMatch } from './types';
 
 // Query Keys
@@ -73,8 +73,8 @@ export function useGenerateTrainingMatches(tournamentId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: { matchDate: string; startTime?: string }) =>
-      finalDayApi.generateTrainingMatches(tournamentId, params.matchDate, params.startTime),
+    mutationFn: (params: { matchDate: string; startTime?: string; minVenues?: number }) =>
+      finalDayApi.generateTrainingMatches(tournamentId, params.matchDate, params.startTime, params.minVenues),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: finalDayKeys.training(tournamentId) });
       queryClient.invalidateQueries({ queryKey: finalDayKeys.all });
@@ -99,7 +99,7 @@ export function useUpdateFinalsBracket(tournamentId: number) {
 /**
  * 試合のチーム変更
  */
-export function useUpdateMatchTeams(tournamentId: number) {
+export function useUpdateMatchTeams(_tournamentId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -114,7 +114,7 @@ export function useUpdateMatchTeams(tournamentId: number) {
 /**
  * チーム入れ替え
  */
-export function useSwapTeams(tournamentId: number) {
+export function useSwapTeams(_tournamentId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -128,7 +128,7 @@ export function useSwapTeams(tournamentId: number) {
 /**
  * 試合削除
  */
-export function useDeleteFinalMatch(tournamentId: number) {
+export function useDeleteFinalMatch(_tournamentId: number) {
   const queryClient = useQueryClient();
 
   return useMutation({

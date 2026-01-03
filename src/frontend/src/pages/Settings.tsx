@@ -3,6 +3,7 @@
  * 大会設定・会場設定・選手管理
  */
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import api from '@/core/http'
@@ -44,6 +45,8 @@ function Settings() {
     address: '',
     groupId: '',
     maxMatchesPerDay: 6,
+    forFinalDay: false,
+    isFinalsVenue: false,
   })
   const [showAddVenueModal, setShowAddVenueModal] = useState(false)
   const [addVenueForm, setAddVenueForm] = useState({
@@ -52,6 +55,8 @@ function Settings() {
     address: '',
     groupId: '',
     pitchCount: 1,
+    forFinalDay: false,
+    isFinalsVenue: false,
   })
 
   // 新規大会作成モーダル
@@ -148,8 +153,17 @@ function Settings() {
 
   // 会場更新
   const updateVenueMutation = useMutation({
-    mutationFn: async (data: { id: number; name: string; address?: string; group_id?: string; max_matches_per_day?: number }) => {
+    mutationFn: async (data: {
+      id: number;
+      name: string;
+      address?: string | null;
+      groupId?: string | null;
+      maxMatchesPerDay?: number;
+      forFinalDay?: boolean;
+      isFinalsVenue?: boolean;
+    }) => {
       const { id, ...rest } = data
+      console.log('[updateVenueMutation] Sending to API:', rest)
       const response = await api.patch<Venue>(`/venues/${id}`, rest)
       return response.data
     },
@@ -171,6 +185,8 @@ function Settings() {
       address: venue.address || '',
       groupId: venue.groupId || venue.group_id || '',
       maxMatchesPerDay: venue.maxMatchesPerDay ?? venue.max_matches_per_day ?? 6,
+      forFinalDay: venue.forFinalDay ?? venue.for_final_day ?? false,
+      isFinalsVenue: venue.isFinalsVenue ?? venue.is_finals_venue ?? false,
     })
     setShowVenueModal(true)
   }
@@ -178,13 +194,20 @@ function Settings() {
   // 会場を保存
   const handleSaveVenue = () => {
     if (!selectedVenue) return
-    updateVenueMutation.mutate({
+
+    // camelCaseで明示的に送信（booleanはfalseも有効な値）
+    const payload = {
       id: selectedVenue.id,
       name: venueForm.name,
-      address: venueForm.address || undefined,
-      group_id: venueForm.groupId || undefined,
-      max_matches_per_day: venueForm.maxMatchesPerDay,
-    })
+      address: venueForm.address || null,
+      groupId: venueForm.groupId || null,
+      maxMatchesPerDay: venueForm.maxMatchesPerDay,
+      forFinalDay: venueForm.forFinalDay,      // false も明示的に送信
+      isFinalsVenue: venueForm.isFinalsVenue,  // false も明示的に送信
+    }
+    console.log('[handleSaveVenue] Sending payload:', payload)
+
+    updateVenueMutation.mutate(payload)
   }
 
   // 新規大会を作成
@@ -247,12 +270,14 @@ function Settings() {
         address: addVenueForm.address || undefined,
         groupId: addVenueForm.groupId || undefined,
         pitchCount: addVenueForm.pitchCount,
+        forFinalDay: addVenueForm.forFinalDay,
+        isFinalsVenue: addVenueForm.isFinalsVenue,
       },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['venues', tournamentId] })
           setShowAddVenueModal(false)
-          setAddVenueForm({ name: '', shortName: '', address: '', groupId: '', pitchCount: 1 })
+          setAddVenueForm({ name: '', shortName: '', address: '', groupId: '', pitchCount: 1, forFinalDay: false, isFinalsVenue: false })
           toast.success('会場を追加しました')
         },
         onError: (error: Error) => {
@@ -380,8 +405,8 @@ function Settings() {
               <tr>
                 <th>会場名</th>
                 <th>担当グループ</th>
-                <th>住所</th>
-                <th>1日あたりの試合数</th>
+                <th>最終日設定</th>
+                <th>試合数/日</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -399,30 +424,50 @@ function Settings() {
                   </td>
                 </tr>
               ) : (
-                venues.map((venue) => (
-                  <tr key={venue.id}>
-                    <td>{venue.name}</td>
-                    <td>
-                      {(venue.group_id || venue.groupId) ? (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${GROUP_COLORS[venue.group_id || venue.groupId || ''] || 'bg-gray-100 text-gray-800'}`}>
-                          {venue.group_id || venue.groupId}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td>{venue.address || '-'}</td>
-                    <td>{venue.maxMatchesPerDay ?? venue.max_matches_per_day}</td>
-                    <td>
-                      <button
-                        className="text-primary-600 hover:text-primary-800 text-sm"
-                        onClick={() => openVenueModal(venue)}
-                      >
-                        編集
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                venues.map((venue) => {
+                  const forFinalDay = venue.forFinalDay ?? venue.for_final_day ?? false;
+                  const isFinalsVenue = venue.isFinalsVenue ?? venue.is_finals_venue ?? false;
+                  return (
+                    <tr key={venue.id}>
+                      <td>{venue.name}</td>
+                      <td>
+                        {(venue.group_id || venue.groupId) ? (
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${GROUP_COLORS[venue.group_id || venue.groupId || ''] || 'bg-gray-100 text-gray-800'}`}>
+                            {venue.group_id || venue.groupId}
+                          </span>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-1">
+                          {forFinalDay && (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded">
+                              順位リーグ
+                            </span>
+                          )}
+                          {isFinalsVenue && (
+                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">
+                              決勝会場
+                            </span>
+                          )}
+                          {!forFinalDay && !isFinalsVenue && (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>{venue.maxMatchesPerDay ?? venue.max_matches_per_day}</td>
+                      <td>
+                        <button
+                          className="text-primary-600 hover:text-primary-800 text-sm"
+                          onClick={() => openVenueModal(venue)}
+                        >
+                          編集
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -436,17 +481,18 @@ function Settings() {
         </div>
         <div className="card-body">
           <p className="text-gray-600 mb-4">
-            各チームの選手データをCSV/Excel形式でインポートできます。
+            各チームの選手データをExcel形式でインポートできます。
             インポートした選手名は、得点者入力時のサジェストに使用されます。
           </p>
           <div className="flex gap-2">
-            <button className="btn-secondary" onClick={() => toast.error('テンプレートダウンロード機能は準備中です')}>
-              テンプレートダウンロード
-            </button>
-            <button className="btn-primary" onClick={() => toast.error('選手データインポート機能は準備中です')}>
-              選手データインポート
-            </button>
+            <Link to="/players" className="btn-primary inline-flex items-center gap-2">
+              選手管理ページへ
+              <span className="text-xs">（インポート機能あり）</span>
+            </Link>
           </div>
+          <p className="text-xs text-gray-500 mt-3">
+            ※ 選手管理ページでチームを選択し、「Excelインポート」ボタンからインポートできます
+          </p>
         </div>
       </div>
 
@@ -635,6 +681,29 @@ function Settings() {
               onChange={(e) => setAddVenueForm(prev => ({ ...prev, pitchCount: parseInt(e.target.value) || 1 }))}
             />
           </div>
+          <div className="border-t pt-4 mt-4">
+            <h4 className="font-medium mb-3 text-gray-700">最終日（順位リーグ・決勝）設定</h4>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary-600 rounded"
+                  checked={addVenueForm.forFinalDay}
+                  onChange={(e) => setAddVenueForm(prev => ({ ...prev, forFinalDay: e.target.checked }))}
+                />
+                <span className="text-sm">最終日の順位リーグ会場として使用</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary-600 rounded"
+                  checked={addVenueForm.isFinalsVenue}
+                  onChange={(e) => setAddVenueForm(prev => ({ ...prev, isFinalsVenue: e.target.checked }))}
+                />
+                <span className="text-sm">決勝トーナメント会場（3決・決勝戦）</span>
+              </label>
+            </div>
+          </div>
           <div className="flex justify-end gap-3 pt-4">
             <button
               className="btn-secondary"
@@ -702,6 +771,32 @@ function Settings() {
               value={venueForm.maxMatchesPerDay}
               onChange={(e) => setVenueForm(prev => ({ ...prev, maxMatchesPerDay: parseInt(e.target.value) || 6 }))}
             />
+          </div>
+          <div className="border-t pt-4 mt-4">
+            <h4 className="font-medium mb-3 text-gray-700">最終日（順位リーグ・決勝）設定</h4>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary-600 rounded"
+                  checked={venueForm.forFinalDay}
+                  onChange={(e) => setVenueForm(prev => ({ ...prev, forFinalDay: e.target.checked }))}
+                />
+                <span className="text-sm">最終日の順位リーグ会場として使用</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 text-primary-600 rounded"
+                  checked={venueForm.isFinalsVenue}
+                  onChange={(e) => setVenueForm(prev => ({ ...prev, isFinalsVenue: e.target.checked }))}
+                />
+                <span className="text-sm">決勝トーナメント会場（3決・決勝戦）</span>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              ※ 決勝トーナメント会場は1つのみ選択してください
+            </p>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button

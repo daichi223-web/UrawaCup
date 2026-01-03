@@ -303,6 +303,8 @@ export interface Venue {
   forPreliminary: boolean;
   /** 最終日用フラグ */
   forFinalDay: boolean;
+  /** 決勝会場フラグ（準決勝・3決・決勝用） */
+  isFinalsVenue: boolean;
   /** 備考 */
   notes?: string;
   /** 作成日時 */
@@ -315,6 +317,7 @@ export interface Venue {
   max_matches_per_day?: number;
   for_preliminary?: boolean;
   for_final_day?: boolean;
+  is_finals_venue?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -328,6 +331,7 @@ export interface VenueCreate {
   maxMatchesPerDay?: number;
   forPreliminary?: boolean;
   forFinalDay?: boolean;
+  isFinalsVenue?: boolean;
   notes?: string;
 }
 
@@ -339,6 +343,7 @@ export interface VenueUpdate {
   maxMatchesPerDay?: number;
   forPreliminary?: boolean;
   forFinalDay?: boolean;
+  isFinalsVenue?: boolean;
   notes?: string;
 }
 

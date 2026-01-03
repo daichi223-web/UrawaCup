@@ -1,7 +1,6 @@
 // src/features/final-day/components/MatchRow.tsx
 // 試合行コンポーネント
 
-import { useState } from 'react';
 import type { FinalMatch } from '../types';
 import { DraggableTeamSlot } from './DraggableTeamSlot';
 

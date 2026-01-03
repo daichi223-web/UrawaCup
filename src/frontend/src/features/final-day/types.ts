@@ -1,7 +1,7 @@
 // src/features/final-day/types.ts
 // 最終日組み合わせ画面の型定義
 
-import type { Match, MatchWithDetails, Venue, Team } from '@shared/types';
+import type { MatchWithDetails } from '@shared/types';
 
 /** 最終日試合の種別 */
 export type FinalMatchType = 'semifinal' | 'final' | 'third_place' | 'training';
@@ -100,6 +100,7 @@ export interface DragItem {
 export interface DropTarget {
   matchId: number;
   side: 'home' | 'away';
+  team?: TeamSlot;
 }
 
 /** チーム入れ替えリクエスト */

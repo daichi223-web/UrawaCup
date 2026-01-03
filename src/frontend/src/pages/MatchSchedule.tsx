@@ -2,7 +2,7 @@
  * 日程管理画面
  * 予選リーグ・決勝トーナメントの日程管理
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import api from '@/core/http'
@@ -211,7 +211,7 @@ function MatchSchedule() {
     mutationFn: async () => {
       const day3Str = getDateString(2)
       const { data } = await api.post<MatchListResponse>(
-        `/matches/generate-training/${tournamentId}?match_date=${day3Str}&start_time=09:00`
+        `/matches/generate-training/${tournamentId}?match_date=${day3Str}&start_time=09:00&min_venues=1`
       )
       return data
     },
@@ -303,8 +303,18 @@ function MatchSchedule() {
     },
   })
 
+  // 連打防止用ref
+  const swappingRef = useRef<Set<number>>(new Set())
+
   // チーム入れ替えハンドラ - 複数の変更を順番に処理
   const handleSwapTeams = async (matchId: number, homeTeamId: number, awayTeamId: number) => {
+    // 同じ試合に対する重複呼び出しを防止
+    if (swappingRef.current.has(matchId)) {
+      console.log('[SwapTeams] 重複呼び出しをスキップ:', matchId)
+      return
+    }
+    swappingRef.current.add(matchId)
+
     try {
       await swapTeamsMutation.mutateAsync({ matchId, homeTeamId, awayTeamId })
       // 成功したら即座にデータを再取得
@@ -312,6 +322,11 @@ function MatchSchedule() {
       toast.success('組み合わせを更新しました')
     } catch (error) {
       // エラーはmutation内で処理済み
+    } finally {
+      // 少し遅延してから解除（連打防止）
+      setTimeout(() => {
+        swappingRef.current.delete(matchId)
+      }, 500)
     }
   }
 

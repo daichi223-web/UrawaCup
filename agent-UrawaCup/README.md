@@ -1,181 +1,222 @@
-# 浦和カップ SDK生成エージェント
+# agent-UrawaCup
 
-SystemDesign_v2.md および SDK_CREATION_PROMPT.md に基づいて、アーキテクチャ準拠のフロントエンドコードを生成・検証するツールです。
+UrawaCupテスト・調査エージェント集 - Claude Agent SDKを使用
 
-## アーキテクチャ原則
+## 概要
 
-このSDKは以下の原則に従ってコードを生成します：
+このパッケージには、UrawaCupシステムのテスト・調査・修正を自動化する3つのエージェントが含まれています：
 
-### 1. 単一HTTPクライアント (ARCH-001)
-- **場所**: `src/core/http/client.ts`
-- 全てのAPI呼び出しはこのクライアント経由
-- 禁止: `utils/api.ts`, `utils/apiClient.ts` 等の個別実装
+| エージェント | 役割 |
+|-------------|------|
+| **agent_check.py** | ユーザー操作の自動テスト、イシュー記録 |
+| **agent_investigate.py** | イシューの調査、原因分析 |
+| **agent_fix.py** | 調査結果に基づく自動修正 |
 
-### 2. 認証一元管理 (ARCH-002)
-- **場所**: `src/core/auth/manager.ts`
-- AuthManagerシングルトンでトークン管理
-- 禁止: localStorageへの直接アクセス
-
-### 3. エラー統一 (ARCH-003)
-- **形式**: AppError型
-- FastAPIの`{ detail: "..." }`形式に対応
-- エラーコード: BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, etc.
-
-### 4. 命名規則自動変換 (ARCH-004)
-- フロントエンド: camelCase
-- バックエンド: snake_case
-- transformInterceptorで自動変換
-
-## セットアップ
+## インストール
 
 ```bash
-# Windows
-setup.bat
+cd D:/UrawaCup/agent-UrawaCup
 
-# または手動で
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+# Python仮想環境を作成
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+
+# 依存関係をインストール
+pip install claude-agent-sdk httpx rich
 ```
 
-## コマンド
+---
 
-### コード生成
+## agent_check.py - 操作テスト
+
+ユーザー操作が正常に動作するかを自動テストし、問題を `ISSUES.md` に記録します。
+
+### 使用方法
 
 ```bash
-# Coreモジュール生成（HTTP, Auth, Error）
-python main.py generate-core
+# 全テスト実行
+python agent_check.py
 
-# Feature生成
-python main.py generate-feature --name teams
-python main.py generate-feature --name matches
-python main.py generate-feature --name standings
+# テスト一覧を表示
+python agent_check.py --list
+
+# カテゴリを指定してテスト
+python agent_check.py -c venue           # 会場関連のみ
+python agent_check.py -c venue match     # 会場と試合関連
+python agent_check.py -c infrastructure  # インフラ確認のみ
+
+# 記録されたイシューを表示
+python agent_check.py --issues
 ```
 
-### アーキテクチャ検証
+## テストカテゴリ
+
+| カテゴリ | 説明 |
+|---------|------|
+| `infrastructure` | バックエンド・フロントエンド接続確認 |
+| `venue` | 会場関連API・設定保存 |
+| `team` | チーム関連API |
+| `match` | 試合関連API |
+| `build` | フロントエンドビルド確認 |
+| `files` | 重要ファイル存在確認 |
+| `dragdrop` | ドラッグ&ドロップ機能実装確認 |
+
+## テストシナリオ
+
+| ID | テスト名 | カテゴリ |
+|----|---------|---------|
+| T001 | バックエンドAPI接続確認 | infrastructure |
+| T002 | フロントエンド接続確認 | infrastructure |
+| T003 | 会場一覧API確認 | venue |
+| T004 | 会場更新API確認（Boolean false送信） | venue |
+| T005 | チーム一覧API確認 | team |
+| T006 | 試合一覧API確認 | match |
+| T007 | フロントエンドビルド確認 | build |
+| T008 | 重要ファイル存在確認 | files |
+| T009 | createPortal実装確認 | dragdrop |
+| T010 | 会場設定snake_case送信確認 | venue |
+| T011 | 連打防止実装確認 | dragdrop |
+
+## イシュー記録
+
+テスト中に以下の状況が検出されると、自動的に `ISSUES.md` に記録されます：
+
+- **BUG**: エラーや失敗が発生した場合
+- **QUESTION**: 不明点や要調査事項が見つかった場合
+- **ERROR**: テスト自体の実行エラー
+
+## 出力例
+
+```
++----------------------------------------+
+|       UrawaCup操作テスト開始           |
+| テスト数: 11                           |
+| イシュー記録先: D:/UrawaCup/ISSUES.md  |
++----------------------------------------+
+
+[OK] バックエンドAPI接続確認
+[OK] フロントエンド接続確認
+[NG] 会場更新API確認（Boolean false送信）
+...
+
++--------------------------------------+
+| PASS: 9 | FAIL: 1 | ERROR: 1         |
+| Issues recorded: 2                    |
++--------------------------------------+
+```
+
+## 前提条件
+
+- Python 3.10+
+- Claude Agent SDK がインストールされていること
+- Anthropic API キーが設定されていること（`ANTHROPIC_API_KEY`）
+- UrawaCupのバックエンド・フロントエンドが起動していること
+
+---
+
+## agent_investigate.py - イシュー調査
+
+`ISSUES.md` に記録されたイシューを調査し、原因分析レポートを作成します。
+
+### 使用方法
 
 ```bash
-# 全検証実行
-python main.py validate-architecture
+# 全イシューを調査
+python agent_investigate.py
 
-# 出力例:
-# ステータス: PASS | WARNING | FAIL
-# 違反一覧（Critical/High/Medium）
+# イシュー一覧を表示
+python agent_investigate.py --list
+
+# 特定のイシューを調査
+python agent_investigate.py -i T004
+
+# 調査レポート一覧を表示
+python agent_investigate.py --reports
 ```
 
-### マイグレーション
+### 出力先
+
+- `D:/UrawaCup/docs/investigations/` - 調査レポート
+- `D:/UrawaCup/docs/investigations/_SUMMARY.md` - サマリー
+
+---
+
+## agent_fix.py - 自動修正
+
+調査レポートを読み取り、実装を要件と比較し、修正可能なものは自動修正します。
+
+### 使用方法
 
 ```bash
-# 非推奨ファイルからの移行分析
-python main.py migrate --from utils/api.ts --to core/http/client.ts
+# 全イシューの修正を試行
+python agent_fix.py
+
+# 修正せずに分析のみ（ドライラン）
+python agent_fix.py --dry-run
+
+# 特定のイシューを修正
+python agent_fix.py -i T004
+
+# 複数のイシューを修正
+python agent_fix.py -i T004 T005 T006
+
+# 要件との比較分析を実行
+python agent_fix.py --compare
+
+# 調査レポート一覧を表示
+python agent_fix.py --list
 ```
 
-### 自動ループ実行
+### 出力先
 
-```bash
-# 全タスク自動実行
-python main.py autoloop
+- `D:/UrawaCup/docs/fixes/` - 修正レポート
 
-# 特定タスクから実行
-python main.py autoloop --start 05_team_management
+### 動作フロー
+
+1. `docs/investigations/` の調査レポートを読み込み
+2. 各イシューについて分析・修正判断
+3. 自動修正可能なものは修正を実行
+4. 修正不可能なものは理由を報告
+5. 新たな不明点はISSUES.mdに追記
+
+---
+
+## ワークフロー
+
+推奨される使用順序:
+
+```
+1. agent_check.py    → テスト実行、イシュー検出
+2. agent_investigate.py → イシュー調査、原因分析
+3. agent_fix.py      → 自動修正、要件比較
 ```
 
-### その他
+---
 
-```bash
-# タスク一覧表示
-python main.py list
+## 前提条件
 
-# 指定タスク実行
-python main.py run 01_project_setup
-```
+- Python 3.10+
+- Claude Agent SDK がインストールされていること
+- Anthropic API キーが設定されていること（`ANTHROPIC_API_KEY`）
+- UrawaCupのバックエンド・フロントエンドが起動していること（agent_check.py）
 
-## ディレクトリ構造
-
-### エージェント構成
+## ファイル構成
 
 ```
 agent-UrawaCup/
-├── main.py                 # CLIエントリーポイント
-├── config.py               # 設定・アーキテクチャルール
-├── agents/
-│   ├── __init__.py
-│   ├── issue_manager.py         # Issue管理
-│   ├── requirement_analyzer.py  # 要件解析
-│   ├── code_generator.py        # コード生成
-│   ├── architecture_validator.py # アーキテクチャ検証
-│   └── auto_loop_agent.py       # 自動ループ実行
-└── prompts/
-    └── sdk_generation.md        # 生成プロンプト
+├── agent_check.py       # 操作テストエージェント
+├── agent_investigate.py # イシュー調査エージェント
+├── agent_fix.py         # 自動修正エージェント
+├── pyproject.toml       # プロジェクト設定
+└── README.md            # このファイル
+
+D:/UrawaCup/
+├── ISSUES.md                      # イシュー記録
+└── docs/
+    ├── investigations/            # 調査レポート
+    │   ├── _SUMMARY.md
+    │   └── T001_*.md, T002_*.md...
+    └── fixes/                     # 修正レポート
+        └── fix_report_*.md
 ```
-
-### 生成されるCore構造
-
-```
-src/frontend/src/core/
-├── http/
-│   ├── client.ts           # 唯一のHTTPクライアント
-│   ├── types.ts            # リクエスト/レスポンス型
-│   └── interceptors/
-│       ├── auth.ts         # 認証ヘッダー付与
-│       ├── transform.ts    # snake_case ↔ camelCase
-│       └── error.ts        # エラー変換
-├── auth/
-│   ├── manager.ts          # AuthManagerシングルトン
-│   ├── types.ts            # 認証関連型
-│   └── storage.ts          # トークン永続化
-├── errors/
-│   ├── types.ts            # AppError型
-│   ├── codes.ts            # エラーコード定義
-│   └── handler.ts          # エラーハンドリング
-└── index.ts                # 統一エクスポート
-```
-
-### 生成されるFeature構造
-
-```
-src/frontend/src/features/{feature_name}/
-├── api.ts                  # API呼び出し（httpClient使用）
-├── hooks.ts                # React Query フック
-├── types.ts                # Feature固有型
-├── components/             # UIコンポーネント
-└── index.ts                # 公開API
-```
-
-## 検証ルール
-
-| ルールID | 名称 | 重要度 | 説明 |
-|----------|------|--------|------|
-| ARCH-001 | single_http_client | Critical | HTTPクライアントは1つのみ |
-| ARCH-002 | centralized_auth | Critical | 認証はAuthManager経由 |
-| ARCH-003 | unified_error | High | エラーはAppError形式 |
-| ARCH-004 | naming_convention | High | 命名規則の自動変換 |
-| ARCH-005 | feature_structure | Medium | Feature構造の統一 |
-
-## Feature一覧
-
-| Feature | 説明 | 優先度 |
-|---------|------|--------|
-| tournaments | 大会管理 | 1 |
-| teams | チーム管理 | 1 |
-| matches | 試合管理・結果入力 | 1 |
-| standings | 順位表自動計算 | 1 |
-| players | 選手管理 | 2 |
-| exclusions | 対戦除外設定 | 2 |
-| venues | 会場管理 | 2 |
-| reports | 報告書生成 | 2 |
-
-## 技術スタック
-
-- **フロントエンド**: React + TypeScript + Vite + Tailwind CSS
-- **バックエンド**: Python FastAPI + SQLAlchemy + SQLite
-- **状態管理**: Zustand
-- **データフェッチ**: TanStack Query (React Query)
-- **PDF生成**: reportlab
-- **Excel生成**: openpyxl
-
-## 参照ドキュメント
-
-- `D:\UrawaCup\SystemDesign_v2.md` - システム設計書
-- `D:\UrawaCup\SDK_CREATION_PROMPT.md` - SDK生成プロンプト
-- `D:\UrawaCup\Requirement\RequirementSpec.md` - 要件定義書

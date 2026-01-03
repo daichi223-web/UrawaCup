@@ -127,31 +127,38 @@ function Reports() {
   };
 
   // 特別レポートのダウンロード
-  const handleDownloadSpecialReport = async (type: 'groupStandings' | 'finalDaySchedule' | 'finalResult') => {
+  const handleDownloadSpecialReport = async (
+    type: 'groupStandings' | 'finalDaySchedule' | 'finalResult',
+    format: 'pdf' | 'excel' = 'pdf'
+  ) => {
     try {
-      setSpecialReportLoading(type);
+      setSpecialReportLoading(`${type}-${format}`);
       let blob: Blob;
       let filename: string;
+      const ext = format === 'pdf' ? 'pdf' : 'xlsx';
 
       switch (type) {
         case 'groupStandings':
-          blob = await reportApi.downloadGroupStandings({ tournamentId });
-          filename = `group_standings_${tournamentId}.pdf`;
+          blob = format === 'pdf'
+            ? await reportApi.downloadGroupStandings({ tournamentId })
+            : await reportApi.downloadGroupStandingsExcel({ tournamentId });
+          filename = `group_standings_${tournamentId}.${ext}`;
           break;
         case 'finalDaySchedule':
           if (!date) {
             toast.error('日付を選択してください');
             return;
           }
-          blob = await reportApi.downloadFinalDaySchedule({
-            tournamentId,
-            date: dateMap[date]
-          });
-          filename = `final_day_schedule_${dateMap[date]}.pdf`;
+          blob = format === 'pdf'
+            ? await reportApi.downloadFinalDaySchedule({ tournamentId, date: dateMap[date] })
+            : await reportApi.downloadFinalDayScheduleExcel({ tournamentId, date: dateMap[date] });
+          filename = `final_day_schedule_${dateMap[date]}.${ext}`;
           break;
         case 'finalResult':
-          blob = await reportApi.downloadFinalResult(tournamentId);
-          filename = `final_result_${tournamentId}.pdf`;
+          blob = format === 'pdf'
+            ? await reportApi.downloadFinalResult(tournamentId)
+            : await reportApi.downloadFinalResultExcel(tournamentId);
+          filename = `final_result_${tournamentId}.${ext}`;
           break;
       }
 
@@ -307,19 +314,33 @@ function Reports() {
             <div className="bg-gray-50 rounded-lg p-6 flex flex-col items-center text-center">
               <Table className="w-10 h-10 mb-3 text-blue-500" />
               <h4 className="font-medium mb-2">グループ順位表</h4>
-              <p className="text-sm text-gray-500 mb-4">予選リーグの順位表をPDFで出力</p>
-              <button
-                onClick={() => handleDownloadSpecialReport('groupStandings')}
-                disabled={specialReportLoading === 'groupStandings'}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                {specialReportLoading === 'groupStandings' ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                PDFダウンロード
-              </button>
+              <p className="text-sm text-gray-500 mb-4">予選リーグの順位表を出力</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownloadSpecialReport('groupStandings', 'pdf')}
+                  disabled={specialReportLoading === 'groupStandings-pdf'}
+                  className="btn btn-secondary flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'groupStandings-pdf' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  PDF
+                </button>
+                <button
+                  onClick={() => handleDownloadSpecialReport('groupStandings', 'excel')}
+                  disabled={specialReportLoading === 'groupStandings-excel'}
+                  className="btn btn-success flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'groupStandings-excel' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Excel
+                </button>
+              </div>
             </div>
 
             {/* 最終日組み合わせ表 */}
@@ -327,18 +348,32 @@ function Reports() {
               <Calendar className="w-10 h-10 mb-3 text-green-500" />
               <h4 className="font-medium mb-2">最終日組み合わせ表</h4>
               <p className="text-sm text-gray-500 mb-4">順位リーグ・決勝トーナメントの日程</p>
-              <button
-                onClick={() => handleDownloadSpecialReport('finalDaySchedule')}
-                disabled={!date || specialReportLoading === 'finalDaySchedule'}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                {specialReportLoading === 'finalDaySchedule' ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                PDFダウンロード
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownloadSpecialReport('finalDaySchedule', 'pdf')}
+                  disabled={!date || specialReportLoading === 'finalDaySchedule-pdf'}
+                  className="btn btn-secondary flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'finalDaySchedule-pdf' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  PDF
+                </button>
+                <button
+                  onClick={() => handleDownloadSpecialReport('finalDaySchedule', 'excel')}
+                  disabled={!date || specialReportLoading === 'finalDaySchedule-excel'}
+                  className="btn btn-success flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'finalDaySchedule-excel' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Excel
+                </button>
+              </div>
               {!date && <p className="text-xs text-orange-500 mt-2">※日付を選択してください</p>}
             </div>
 
@@ -347,18 +382,32 @@ function Reports() {
               <Trophy className="w-10 h-10 mb-3 text-yellow-500" />
               <h4 className="font-medium mb-2">最終結果報告書</h4>
               <p className="text-sm text-gray-500 mb-4">決勝トーナメント結果・最終順位</p>
-              <button
-                onClick={() => handleDownloadSpecialReport('finalResult')}
-                disabled={specialReportLoading === 'finalResult'}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                {specialReportLoading === 'finalResult' ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                PDFダウンロード
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleDownloadSpecialReport('finalResult', 'pdf')}
+                  disabled={specialReportLoading === 'finalResult-pdf'}
+                  className="btn btn-secondary flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'finalResult-pdf' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  PDF
+                </button>
+                <button
+                  onClick={() => handleDownloadSpecialReport('finalResult', 'excel')}
+                  disabled={specialReportLoading === 'finalResult-excel'}
+                  className="btn btn-success flex items-center gap-2 text-sm"
+                >
+                  {specialReportLoading === 'finalResult-excel' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Excel
+                </button>
+              </div>
             </div>
           </div>
         </div>

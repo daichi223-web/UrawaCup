@@ -3,7 +3,7 @@
 
 import { httpClient } from '@/core/http';
 import type { MatchWithDetails } from '@shared/types';
-import type { SwapTeamsRequest, UpdateMatchTeamsRequest } from './types';
+import type { SwapTeamsRequest } from './types';
 
 interface MatchListResponse {
   matches: MatchWithDetails[];
@@ -78,7 +78,8 @@ export const finalDayApi = {
   generateTrainingMatches: async (
     tournamentId: number,
     matchDate: string,
-    startTime: string = '09:30'
+    startTime: string = '09:30',
+    minVenues: number = 1
   ): Promise<MatchWithDetails[]> => {
     const response = await httpClient.post<MatchListResponse>(
       `/matches/generate-training/${tournamentId}`,
@@ -87,6 +88,7 @@ export const finalDayApi = {
         params: {
           match_date: matchDate,
           start_time: startTime,
+          min_venues: minVenues,
         },
       }
     );

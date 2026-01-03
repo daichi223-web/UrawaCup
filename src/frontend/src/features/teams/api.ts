@@ -3,20 +3,25 @@
 import { httpClient } from '@/core/http';
 import type { Team, CreateTeamInput, UpdateTeamInput, TeamWithPlayers } from './types';
 
+interface TeamListResponse {
+  teams: Team[];
+  total: number;
+}
+
 export const teamApi = {
   // 全チーム取得
   getAll: async (tournamentId?: number): Promise<Team[]> => {
     const params = tournamentId ? { tournamentId } : undefined;
-    const response = await httpClient.get<Team[]>('/teams', { params });
-    return response.data;
+    const response = await httpClient.get<TeamListResponse>('/teams', { params });
+    return response.data.teams || [];
   },
 
   // グループ別チーム取得
   getByGroup: async (tournamentId: number, groupId: string): Promise<Team[]> => {
-    const response = await httpClient.get<Team[]>('/teams', {
+    const response = await httpClient.get<TeamListResponse>('/teams', {
       params: { tournamentId, groupId },
     });
-    return response.data;
+    return response.data.teams || [];
   },
 
   // 単一チーム取得

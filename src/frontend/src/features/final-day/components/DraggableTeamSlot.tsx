@@ -49,6 +49,7 @@ export function DraggableTeamSlot({
     data: {
       matchId,
       side,
+      team,
     } as DropTarget,
     disabled: isDragDisabled,
   });

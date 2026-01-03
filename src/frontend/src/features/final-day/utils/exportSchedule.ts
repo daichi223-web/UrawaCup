@@ -48,8 +48,8 @@ export function exportScheduleToCSV(
   };
 
   const sortedKnockout = [...knockoutMatches].sort((a, b) => {
-    const order = { semifinal: 1, third_place: 2, final: 3 };
-    return (order[a.matchType] || 99) - (order[b.matchType] || 99);
+    const order: Record<string, number> = { training: 0, semifinal: 1, third_place: 2, final: 3 };
+    return (order[a.matchType] ?? 99) - (order[b.matchType] ?? 99);
   });
 
   for (const match of sortedKnockout) {
@@ -92,8 +92,8 @@ export function printSchedule(
   };
 
   const sortedKnockout = [...knockoutMatches].sort((a, b) => {
-    const order = { semifinal: 1, third_place: 2, final: 3 };
-    return (order[a.matchType] || 99) - (order[b.matchType] || 99);
+    const order: Record<string, number> = { training: 0, semifinal: 1, third_place: 2, final: 3 };
+    return (order[a.matchType] ?? 99) - (order[b.matchType] ?? 99);
   });
 
   const html = `

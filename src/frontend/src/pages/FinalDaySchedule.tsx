@@ -1,7 +1,8 @@
 // src/pages/FinalDaySchedule.tsx
 // 最終日組み合わせ画面
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DndContext,
   DragEndEvent,
@@ -13,7 +14,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { RefreshCw, Save, Calendar, Download, Printer } from 'lucide-react';
+import { RefreshCw, Save, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -34,14 +35,12 @@ import {
 } from '@/features/final-day/hooks';
 import type {
   FinalMatch,
-  TeamSlot,
   DragItem,
   DropTarget,
   VenueSchedule,
 } from '@/features/final-day/types';
 import { useTeams } from '@/features/teams/hooks';
 import { useAppStore } from '@/stores/appStore';
-import { exportScheduleToCSV, printSchedule } from '@/features/final-day/utils/exportSchedule';
 
 export default function FinalDaySchedule() {
   const { currentTournament } = useAppStore();
@@ -220,19 +219,18 @@ export default function FinalDaySchedule() {
     }
   };
 
-  // CSVエクスポート
-  const handleExportCSV = () => {
-    exportScheduleToCSV(trainingVenues, knockoutMatches, knockoutVenueName, finalDayDate);
-    toast.success('CSVをダウンロードしました');
-  };
-
-  // 印刷
-  const handlePrint = () => {
-    printSchedule(trainingVenues, knockoutMatches, knockoutVenueName, finalDayDate);
-  };
+  // 連打防止用ref（Set型で複数試合の並列管理に対応）
+  const swappingRef = useRef<Set<number>>(new Set());
 
   // チーム入れ替え
   const handleSwapTeams = async (from: DragItem, to: DropTarget) => {
+    // 同じ試合に対する重複呼び出しを防止
+    if (swappingRef.current.has(from.matchId)) {
+      console.log('[SwapTeams] 重複呼び出しをスキップ:', from.matchId);
+      return;
+    }
+    swappingRef.current.add(from.matchId);
+
     try {
       await swapTeams.mutateAsync({
         match1Id: from.matchId,
@@ -244,6 +242,11 @@ export default function FinalDaySchedule() {
     } catch (error) {
       console.error('Failed to swap teams:', error);
       toast.error('チームの入れ替えに失敗しました');
+    } finally {
+      // 少し遅延してから解除（連打防止）
+      setTimeout(() => {
+        swappingRef.current.delete(from.matchId);
+      }, 500);
     }
   };
 
@@ -384,10 +387,13 @@ export default function FinalDaySchedule() {
           />
         </section>
 
-        {/* ドラッグ中のオーバーレイ */}
-        <DragOverlay>
-          {activeItem && <TeamSlotPreview team={activeItem.team} />}
-        </DragOverlay>
+        {/* ドラッグ中のオーバーレイ（createPortalでbodyに描画してオフセット問題を解消） */}
+        {createPortal(
+          <DragOverlay dropAnimation={null}>
+            {activeItem && <TeamSlotPreview team={activeItem.team} />}
+          </DragOverlay>,
+          document.body
+        )}
       </DndContext>
 
       {/* 編集モーダル */}

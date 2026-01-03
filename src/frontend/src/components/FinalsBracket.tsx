@@ -4,6 +4,7 @@
  * ドラッグ&ドロップでチーム入れ替え可能
  */
 import { useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DndContext,
   DragEndEvent,
@@ -549,13 +550,16 @@ export default function FinalsBracket({
         </div>
       </SortableContext>
 
-      <DragOverlay dropAnimation={null}>
-        {activeId && (
-          <div className="bg-primary-100 border-2 border-primary-500 rounded p-3 shadow-lg cursor-grabbing">
-            <span className="font-medium">{getActiveTeamName()}</span>
-          </div>
-        )}
-      </DragOverlay>
+      {createPortal(
+        <DragOverlay dropAnimation={null}>
+          {activeId && (
+            <div className="bg-primary-100 border-2 border-primary-500 rounded p-3 shadow-lg cursor-grabbing">
+              <span className="font-medium">{getActiveTeamName()}</span>
+            </div>
+          )}
+        </DragOverlay>,
+        document.body
+      )}
     </DndContext>
   )
 }

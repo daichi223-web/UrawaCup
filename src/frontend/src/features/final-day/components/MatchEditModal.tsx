@@ -1,9 +1,9 @@
 // src/features/final-day/components/MatchEditModal.tsx
 // 試合編集モーダル
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X } from 'lucide-react';
-import type { FinalMatch, TeamSlot } from '../types';
+import type { FinalMatch } from '../types';
 import type { Team } from '@shared/types';
 
 interface MatchEditModalProps {

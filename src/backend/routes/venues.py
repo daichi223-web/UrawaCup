@@ -1,4 +1,4 @@
-"""
+﻿"""
 Venue（会場）ルーター
 会場のCRUD操作を提供
 """
@@ -108,7 +108,16 @@ def update_venue(
             detail=f"会場が見つかりません (ID: {venue_id})"
         )
 
-    update_data = venue_data.model_dump(exclude_unset=True)
+    # デバッグ: 受信データをログ出力
+    print(f"[Venue Update] venue_id={venue_id}")
+    print(f"[Venue Update] venue_data={venue_data}")
+    print(f"[Venue Update] model_fields_set={venue_data.model_fields_set}")
+
+    # 修正: exclude_unset=True で明示的に設定されたフィールドのみを取得
+    # これにより False も正しく更新される（未設定の None と区別できる）
+    update_data = venue_data.model_dump(by_alias=False, exclude_unset=True)
+
+    print(f"[Venue Update] update_data (exclude_unset)={update_data}")
     old_group_id = venue.group_id
 
     for field, value in update_data.items():

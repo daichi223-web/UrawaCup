@@ -1,0 +1,551 @@
+#!/usr/bin/env python3
+"""
+agent-Check: UrawaCup操作テストエージェント
+Claude Agent SDKを使用してユーザー操作をテストし、動作確認を行う
+不明点や問題はISSUES.mdに記録する
+"""
+
+import asyncio
+import sys
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+try:
+    from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, ResultMessage
+except ImportError:
+    print("Error: claude-agent-sdk is not installed.")
+    print("Install with: pip install claude-agent-sdk")
+    sys.exit(1)
+
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+console = Console()
+
+# プロジェクトルート
+PROJECT_ROOT = Path("D:/UrawaCup")
+ISSUES_FILE = PROJECT_ROOT / "ISSUES.md"
+
+# テストシナリオ定義
+TEST_SCENARIOS = [
+    {
+        "id": "T001",
+        "name": "バックエンドAPI接続確認",
+        "prompt": """
+以下のコマンドでバックエンドAPIが正常に動作しているか確認してください：
+1. curl http://localhost:8000/health または http://localhost:8000/docs にアクセス
+2. レスポンスが正常か確認
+3. 結果を報告（成功/失敗と詳細）
+""",
+        "tools": ["Bash"],
+        "category": "infrastructure"
+    },
+    {
+        "id": "T002",
+        "name": "フロントエンド接続確認",
+        "prompt": """
+以下のコマンドでフロントエンドが正常に動作しているか確認してください：
+1. curl http://localhost:5173 または http://localhost:5174 または http://localhost:5175 にアクセス
+2. HTMLが返ってくるか確認
+3. 結果を報告（成功/失敗と詳細）
+""",
+        "tools": ["Bash"],
+        "category": "infrastructure"
+    },
+    {
+        "id": "T003",
+        "name": "会場一覧API確認",
+        "prompt": """
+会場一覧APIをテストしてください：
+1. curl http://localhost:8000/venues?tournament_id=1 を実行
+2. JSONレスポンスを確認
+3. 会場データが含まれているか確認
+4. for_final_day, is_finals_venue フィールドが存在するか確認
+5. 結果を報告
+""",
+        "tools": ["Bash"],
+        "category": "venue"
+    },
+    {
+        "id": "T004",
+        "name": "会場更新API確認（Boolean false送信）",
+        "prompt": """
+会場更新APIでboolean falseが正しく処理されるかテストしてください：
+1. まず会場一覧を取得: curl http://localhost:8000/venues?tournament_id=1
+2. 最初の会場のIDを確認
+3. その会場を更新（for_final_day=falseを送信）:
+   curl -X PATCH http://localhost:8000/venues/{id} -H "Content-Type: application/json" -d '{"for_final_day": false, "is_finals_venue": false}'
+4. 更新後、再度会場を取得して値が変わったか確認
+5. 結果を報告（for_final_day=falseが正しく保存されたか）
+
+不明点や問題があれば詳しく報告してください。
+""",
+        "tools": ["Bash"],
+        "category": "venue"
+    },
+    {
+        "id": "T005",
+        "name": "チーム一覧API確認",
+        "prompt": """
+チーム一覧APIをテストしてください：
+1. curl http://localhost:8000/teams?tournamentId=1 を実行
+2. JSONレスポンスを確認
+3. teamsフィールドが配列として存在するか確認
+4. 結果を報告
+""",
+        "tools": ["Bash"],
+        "category": "team"
+    },
+    {
+        "id": "T006",
+        "name": "試合一覧API確認",
+        "prompt": """
+試合一覧APIをテストしてください：
+1. curl http://localhost:8000/matches?tournament_id=1 を実行
+2. JSONレスポンスを確認
+3. matchesフィールドが存在するか確認
+4. 結果を報告
+""",
+        "tools": ["Bash"],
+        "category": "match"
+    },
+    {
+        "id": "T007",
+        "name": "フロントエンドビルド確認",
+        "prompt": """
+フロントエンドのTypeScriptエラーがないか確認してください：
+1. cd D:/UrawaCup/src/frontend && npm run build 2>&1 | head -50 を実行
+2. ビルドエラーがあるか確認
+3. 結果を報告（成功/失敗とエラー内容）
+
+エラーがある場合は詳細を報告してください。
+""",
+        "tools": ["Bash"],
+        "category": "build"
+    },
+    {
+        "id": "T008",
+        "name": "重要ファイル存在確認",
+        "prompt": """
+重要なファイルが存在するか確認してください：
+1. D:/UrawaCup/src/frontend/src/pages/Settings.tsx
+2. D:/UrawaCup/src/frontend/src/pages/FinalDaySchedule.tsx
+3. D:/UrawaCup/src/frontend/src/components/FinalsBracket.tsx
+4. D:/UrawaCup/src/frontend/src/components/DraggableMatchList.tsx
+5. D:/UrawaCup/src/backend/routes/venues.py
+6. D:/UrawaCup/src/backend/schemas/venue.py
+
+それぞれのファイルが存在するか確認し、結果を報告してください。
+""",
+        "tools": ["Glob", "Bash"],
+        "category": "files"
+    },
+    {
+        "id": "T009",
+        "name": "createPortal実装確認",
+        "prompt": """
+ドラッグ&ドロップのcreatePortal実装を確認してください：
+1. FinalsBracket.tsx で createPortal が import されているか確認
+2. DraggableMatchList.tsx で createPortal が import されているか確認
+3. FinalDaySchedule.tsx で createPortal が import されているか確認
+4. 各ファイルでDragOverlayがcreatePortalで包まれているか確認
+5. 結果を報告（各ファイルの実装状況）
+
+grepコマンドを使用してください。
+問題がある場合は詳細を報告してください。
+""",
+        "tools": ["Bash", "Grep"],
+        "category": "dragdrop"
+    },
+    {
+        "id": "T010",
+        "name": "会場設定snake_case送信確認",
+        "prompt": """
+Settings.tsxで会場保存時にsnake_caseで送信しているか確認してください：
+1. handleSaveVenue関数を確認
+2. for_final_day, is_finals_venue がsnake_caseで送信されているか確認
+3. 結果を報告
+
+問題がある場合は詳細を報告してください。
+""",
+        "tools": ["Grep", "Read"],
+        "category": "venue"
+    },
+    {
+        "id": "T011",
+        "name": "連打防止実装確認",
+        "prompt": """
+ドラッグ&ドロップの連打防止（重複API呼び出し防止）が実装されているか確認してください：
+1. MatchSchedule.tsx で swappingRef が使われているか確認
+2. FinalDaySchedule.tsx で swappingRef が使われているか確認
+3. 結果を報告
+
+問題がある場合は詳細を報告してください。
+""",
+        "tools": ["Grep", "Read"],
+        "category": "dragdrop"
+    },
+]
+
+
+class TestResult:
+    """テスト結果を格納するクラス"""
+    def __init__(self, test_id: str, name: str, category: str):
+        self.test_id = test_id
+        self.name = name
+        self.category = category
+        self.status: Optional[str] = None  # "PASS", "FAIL", "ERROR"
+        self.message: str = ""
+        self.issues: list[str] = []  # 発見された問題
+        self.duration: float = 0.0
+
+
+class IssueTracker:
+    """イシュー追跡クラス"""
+    def __init__(self, issues_file: Path):
+        self.issues_file = issues_file
+        self.issues: list[dict] = []
+
+    def add_issue(self, test_id: str, test_name: str, category: str,
+                  issue_type: str, description: str, details: str = ""):
+        """イシューを追加"""
+        self.issues.append({
+            "timestamp": datetime.now().isoformat(),
+            "test_id": test_id,
+            "test_name": test_name,
+            "category": category,
+            "type": issue_type,  # "BUG", "QUESTION", "IMPROVEMENT"
+            "description": description,
+            "details": details
+        })
+
+    def save(self):
+        """イシューをファイルに保存"""
+        if not self.issues:
+            return
+
+        # 既存の内容を読み込み
+        existing_content = ""
+        if self.issues_file.exists():
+            existing_content = self.issues_file.read_text(encoding="utf-8")
+
+        # 新しいイシューを追加
+        new_section = f"\n\n## テスト実行: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+
+        for issue in self.issues:
+            icon = {
+                "BUG": "🐛",
+                "QUESTION": "❓",
+                "IMPROVEMENT": "💡",
+                "ERROR": "❌"
+            }.get(issue["type"], "📝")
+
+            new_section += f"""### {icon} [{issue['test_id']}] {issue['description']}
+
+- **カテゴリ**: {issue['category']}
+- **テスト**: {issue['test_name']}
+- **タイプ**: {issue['type']}
+- **検出日時**: {issue['timestamp']}
+
+{issue['details']}
+
+---
+
+"""
+
+        # ファイルに書き込み
+        if not existing_content:
+            header = """# UrawaCup - Issues & Questions
+
+このファイルはagent-Checkによって自動生成されます。
+テスト実行中に発見された問題や不明点を記録します。
+
+"""
+            existing_content = header
+
+        with open(self.issues_file, "w", encoding="utf-8") as f:
+            f.write(existing_content + new_section)
+
+        console.print(f"[yellow]イシューを記録しました: {self.issues_file}[/yellow]")
+
+
+# グローバルイシュートラッカー
+issue_tracker = IssueTracker(ISSUES_FILE)
+
+
+async def run_single_test(scenario: dict, results: list[TestResult]) -> TestResult:
+    """単一のテストシナリオを実行"""
+    result = TestResult(
+        test_id=scenario["id"],
+        name=scenario["name"],
+        category=scenario["category"]
+    )
+
+    start_time = datetime.now()
+    full_response = []
+
+    try:
+        async for message in query(
+            prompt=scenario["prompt"] + "\n\n不明点や問題があれば、必ず報告してください。",
+            options=ClaudeAgentOptions(
+                allowed_tools=scenario["tools"],
+                max_turns=15,
+            )
+        ):
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if hasattr(block, "text"):
+                        full_response.append(block.text)
+            elif isinstance(message, ResultMessage):
+                if message.subtype == "success":
+                    result.status = "PASS"
+                else:
+                    result.status = "FAIL"
+
+        result.message = "\n".join(full_response)
+
+        # レスポンスから成功/失敗を判定
+        response_text = result.message.lower()
+
+        # エラーキーワードの検出
+        error_keywords = ["error", "failed", "失敗", "エラー", "問題", "不明", "見つかりません"]
+        has_error = any(keyword in response_text for keyword in error_keywords)
+
+        if has_error:
+            result.status = "FAIL"
+            # イシューを記録
+            issue_tracker.add_issue(
+                test_id=result.test_id,
+                test_name=result.name,
+                category=result.category,
+                issue_type="BUG" if "error" in response_text or "エラー" in response_text else "QUESTION",
+                description=f"{result.name}で問題を検出",
+                details=result.message[-1000:] if len(result.message) > 1000 else result.message
+            )
+        elif result.status is None:
+            result.status = "PASS"
+
+        # 不明点キーワードの検出
+        question_keywords = ["不明", "わからない", "確認が必要", "要調査"]
+        if any(keyword in response_text for keyword in question_keywords):
+            issue_tracker.add_issue(
+                test_id=result.test_id,
+                test_name=result.name,
+                category=result.category,
+                issue_type="QUESTION",
+                description=f"{result.name}で不明点を検出",
+                details=result.message[-1000:] if len(result.message) > 1000 else result.message
+            )
+
+    except Exception as e:
+        result.status = "ERROR"
+        result.message = str(e)
+        issue_tracker.add_issue(
+            test_id=result.test_id,
+            test_name=result.name,
+            category=result.category,
+            issue_type="ERROR",
+            description=f"{result.name}で実行エラー",
+            details=str(e)
+        )
+
+    result.duration = (datetime.now() - start_time).total_seconds()
+    results.append(result)
+    return result
+
+
+async def run_all_tests(categories: Optional[list[str]] = None) -> list[TestResult]:
+    """全テストを実行"""
+    results: list[TestResult] = []
+
+    # カテゴリフィルタ
+    scenarios = TEST_SCENARIOS
+    if categories:
+        scenarios = [s for s in scenarios if s["category"] in categories]
+
+    console.print(Panel.fit(
+        f"[bold blue]UrawaCup操作テスト開始[/bold blue]\n"
+        f"テスト数: {len(scenarios)}\n"
+        f"イシュー記録先: {ISSUES_FILE}",
+        title="agent-Check"
+    ))
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        for scenario in scenarios:
+            task = progress.add_task(
+                f"[cyan]{scenario['id']}[/cyan] {scenario['name']}...",
+                total=1
+            )
+
+            result = await run_single_test(scenario, results)
+
+            status_icon = {
+                "PASS": "[green]✓[/green]",
+                "FAIL": "[red]✗[/red]",
+                "ERROR": "[yellow]![/yellow]"
+            }.get(result.status, "?")
+
+            progress.update(task, description=f"{status_icon} {scenario['name']}")
+            progress.advance(task)
+
+    # イシューを保存
+    issue_tracker.save()
+
+    return results
+
+
+def print_results(results: list[TestResult]):
+    """テスト結果を表示"""
+    table = Table(title="テスト結果サマリー")
+    table.add_column("ID", style="cyan")
+    table.add_column("テスト名", style="white")
+    table.add_column("カテゴリ", style="blue")
+    table.add_column("結果", style="bold")
+    table.add_column("時間(s)", style="dim")
+
+    pass_count = 0
+    fail_count = 0
+    error_count = 0
+
+    for result in results:
+        status_style = {
+            "PASS": "[green]PASS[/green]",
+            "FAIL": "[red]FAIL[/red]",
+            "ERROR": "[yellow]ERROR[/yellow]"
+        }.get(result.status, result.status)
+
+        if result.status == "PASS":
+            pass_count += 1
+        elif result.status == "FAIL":
+            fail_count += 1
+        else:
+            error_count += 1
+
+        table.add_row(
+            result.test_id,
+            result.name,
+            result.category,
+            status_style,
+            f"{result.duration:.1f}"
+        )
+
+    console.print(table)
+
+    # サマリー
+    total = len(results)
+    console.print(Panel(
+        f"[green]PASS: {pass_count}[/green] | "
+        f"[red]FAIL: {fail_count}[/red] | "
+        f"[yellow]ERROR: {error_count}[/yellow] | "
+        f"Total: {total}\n"
+        f"Issues recorded: {len(issue_tracker.issues)}",
+        title="結果サマリー"
+    ))
+
+    # 失敗したテストの詳細
+    failed = [r for r in results if r.status != "PASS"]
+    if failed:
+        console.print("\n[bold red]失敗したテストの詳細:[/bold red]")
+        for result in failed:
+            console.print(f"\n[cyan]{result.test_id}[/cyan] {result.name}")
+            msg = result.message[:500] + "..." if len(result.message) > 500 else result.message
+            console.print(f"[dim]{msg}[/dim]")
+
+
+def main():
+    """メインエントリポイント"""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="UrawaCup操作テストエージェント（不明点はISSUES.mdに記録）",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+カテゴリ:
+  infrastructure  - インフラ接続確認
+  venue           - 会場関連
+  team            - チーム関連
+  match           - 試合関連
+  build           - ビルド確認
+  files           - ファイル存在確認
+  dragdrop        - ドラッグ&ドロップ機能
+
+使用例:
+  python agent_check.py                    # 全テスト実行
+  python agent_check.py -c venue           # 会場関連のみ
+  python agent_check.py -c venue match     # 会場と試合関連
+  python agent_check.py --list             # テスト一覧表示
+
+不明点や問題は D:/UrawaCup/ISSUES.md に自動記録されます。
+"""
+    )
+    parser.add_argument(
+        "-c", "--category",
+        nargs="+",
+        help="テストするカテゴリを指定"
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="テスト一覧を表示"
+    )
+    parser.add_argument(
+        "--issues",
+        action="store_true",
+        help="現在のイシューを表示"
+    )
+
+    args = parser.parse_args()
+
+    if args.list:
+        table = Table(title="テストシナリオ一覧")
+        table.add_column("ID", style="cyan")
+        table.add_column("名前", style="white")
+        table.add_column("カテゴリ", style="blue")
+        table.add_column("ツール", style="dim")
+
+        for scenario in TEST_SCENARIOS:
+            table.add_row(
+                scenario["id"],
+                scenario["name"],
+                scenario["category"],
+                ", ".join(scenario["tools"])
+            )
+
+        console.print(table)
+        return
+
+    if args.issues:
+        if ISSUES_FILE.exists():
+            console.print(Panel(ISSUES_FILE.read_text(encoding="utf-8"), title="ISSUES.md"))
+        else:
+            console.print("[yellow]イシューファイルはまだありません[/yellow]")
+        return
+
+    # テスト実行
+    try:
+        results = asyncio.run(run_all_tests(args.category))
+        print_results(results)
+
+        # 失敗があれば終了コード1
+        if any(r.status != "PASS" for r in results):
+            sys.exit(1)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]テスト中断[/yellow]")
+        issue_tracker.save()  # 中断時もイシューを保存
+        sys.exit(130)
+    except Exception as e:
+        console.print(f"[red]エラー: {e}[/red]")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

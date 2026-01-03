@@ -803,6 +803,7 @@ def generate_training_matches(
     tournament_id: int,
     match_date: date = Query(..., description="試合日（通常Day3）"),
     start_time: time = Query(time(9, 0), description="開始時刻"),
+    min_venues: int = Query(1, ge=1, le=10, description="必要な会場数（デフォルト1）"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
@@ -851,10 +852,15 @@ def generate_training_matches(
         Venue.is_finals_venue == False,  # 決勝会場以外
     ).all()
 
-    if len(training_venues) < 3:
+    if len(training_venues) < min_venues:
+        # 利用可能な全会場を取得してエラーメッセージに含める
+        all_venues = db.query(Venue).filter(Venue.tournament_id == tournament_id).all()
+        venue_info = [f"{v.name}(for_final_day={v.for_final_day}, is_finals_venue={v.is_finals_venue})" for v in all_venues]
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="研修試合用の会場が不足しています（3会場必要）"
+            detail=f"研修試合用の会場が不足しています。必要: {min_venues}会場, 現在: {len(training_venues)}会場。"
+                   f"設定画面で会場の「最終日の順位リーグ会場として使用」にチェックを入れてください。"
+                   f"（決勝会場は除外されます）現在の会場: {venue_info}"
         )
 
     created_matches = []

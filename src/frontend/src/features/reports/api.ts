@@ -109,4 +109,41 @@ export const reportApi = {
     });
     return response.data;
   },
+
+  // ===== Excel出力（特別レポート） =====
+
+  // グループ順位表Excelダウンロード
+  downloadGroupStandingsExcel: async (params: { tournamentId: number; groupId?: string }): Promise<Blob> => {
+    const response = await httpClient.get('/reports/export/group-standings/excel', {
+      params: {
+        tournament_id: params.tournamentId,
+        group_id: params.groupId,
+      },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // 最終日組み合わせ表Excelダウンロード
+  downloadFinalDayScheduleExcel: async (params: { tournamentId: number; date: string }): Promise<Blob> => {
+    const response = await httpClient.get('/reports/export/final-day-schedule/excel', {
+      params: {
+        tournament_id: params.tournamentId,
+        target_date: params.date,
+      },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // 最終結果報告書Excelダウンロード
+  downloadFinalResultExcel: async (tournamentId: number): Promise<Blob> => {
+    const response = await httpClient.get('/reports/export/final-result/excel', {
+      params: {
+        tournament_id: tournamentId,
+      },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
