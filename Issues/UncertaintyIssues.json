@@ -1,0 +1,167 @@
+[
+  {
+    "id": 1,
+    "type": "data_structure",
+    "title": "報告書発信元情報の保存場所",
+    "assumption": "発信元情報（所属、氏名、連絡先）はユーザーごとに保存されるはずだ",
+    "question": "発信元情報はどこに保存されるのか？大会ごと？ユーザーごと？設定画面で入力？",
+    "investigation_steps": [
+      "Userモデルに発信元フィールドがあるか確認する",
+      "Tournamentモデルに発信元フィールドがあるか確認する",
+      "フロントエンドの設定画面で発信元入力があるか確認する"
+    ],
+    "status": "resolved",
+    "findings": "発信元情報はTournamentモデルに追加した（sender_organization, sender_name, sender_contact）",
+    "correct_answer": "Tournamentモデルに3つのフィールドを追加: sender_organization, sender_name, sender_contact。DailyReportGeneratorは優先順位（引数 > Tournament設定 > デフォルト）で発信元を決定する。",
+    "created_at": "2026-01-02T10:00:00",
+    "resolved_at": "2026-01-02T13:00:00"
+  },
+  {
+    "id": 2,
+    "type": "api_response",
+    "title": "日本語フォントのパス",
+    "assumption": "IPAゴシックまたはNoto Sans JPがシステムにインストールされているはずだ",
+    "question": "PDF生成に使用する日本語フォントはどこにあるか？ファイルを同梱すべきか？",
+    "investigation_steps": [
+      "フォントファイルがfonts/ディレクトリにあるか確認",
+      "システムフォントのパスを確認",
+      "フォールバック処理が正しいか確認"
+    ],
+    "status": "clarified",
+    "findings": "ReportLabがインストール済み。フォントはシステムフォントを使用し、見つからない場合はHelveticaにフォールバック",
+    "correct_answer": "システムフォント（Windows: msgothic.ttc）を使用。フォント同梱は将来の改善点として記録",
+    "created_at": "2026-01-02T10:00:00",
+    "resolved_at": "2026-01-02T10:00:00"
+  },
+  {
+    "id": 3,
+    "type": "business_logic",
+    "title": "大会日数の計算方法",
+    "assumption": "大会開始日からの経過日数で「第N日」を計算するはずだ",
+    "question": "報告書に表示する「第1日」「第2日」はどのように計算するか？",
+    "investigation_steps": [
+      "Tournamentモデルのstart_dateを確認",
+      "試合日との差分で日数を計算する方法を確認"
+    ],
+    "status": "clarified",
+    "findings": "Tournament.start_dateが存在する。target_date - start_date + 1 で日数を計算できる",
+    "correct_answer": "day_number = (target_date - tournament.start_date).days + 1",
+    "created_at": "2026-01-02T10:00:00",
+    "resolved_at": "2026-01-02T10:00:00"
+  },
+  {
+    "id": 4,
+    "type": "business_logic",
+    "title": "最終日組み合わせ表の生成タイミング",
+    "assumption": "予選終了後に自動生成されるはずだ",
+    "question": "順位リーグ・決勝トーナメントの組み合わせはいつ、どのように決定されるか？",
+    "investigation_steps": [
+      "予選終了判定ロジックを確認",
+      "順位リーグ組み合わせ生成ロジックを確認",
+      "決勝トーナメント組み合わせ生成ロジックを確認"
+    ],
+    "status": "resolved",
+    "findings": "routes/matches.pyに生成ロジックが実装済み。自動生成ではなく管理者がAPIを呼び出して生成する。",
+    "correct_answer": "1. 研修試合: POST /generate-training-matches/{tournament_id} - 同順位同士かつ予選未対戦のペアを組み合わせ。2. 決勝トーナメント: POST /generate-finals/{tournament_id} - 各グループ1位から準決勝・3決・決勝を生成。3. トーナメント更新: PUT /update-finals-bracket/{tournament_id} - 準決勝結果後に勝者を反映。FinalDayScheduleGeneratorは既存試合のPDF出力のみ担当。",
+    "created_at": "2026-01-02T10:00:00",
+    "resolved_at": "2026-01-02T13:00:00"
+  },
+  {
+    "id": 5,
+    "type": "data_structure",
+    "title": "会場責任チームの取得方法",
+    "assumption": "会場には責任チームが割り当てられているはずだ",
+    "question": "FinalDayScheduleGeneratorで表示する「会場責任チーム」はどこから取得するか？",
+    "investigation_steps": [
+      "Venueモデルに責任チームフィールドがあるか確認",
+      "最終日専用のスケジュールテーブルがあるか確認"
+    ],
+    "status": "resolved",
+    "findings": "Venueモデルにmanager_team_idフィールドを追加した。FinalDayScheduleGeneratorはvenue.manager_teamから責任チーム名を取得する。",
+    "correct_answer": "Venueモデルにmanager_team_id (FK to teams.id)を追加。FinalDayScheduleGeneratorはjoinedloadでmanager_teamを読み込み、short_name or nameを表示。",
+    "created_at": "2026-01-02T12:00:00",
+    "resolved_at": "2026-01-02T13:30:00"
+  },
+  {
+    "id": 6,
+    "type": "data_structure",
+    "title": "シード情報の取得方法",
+    "assumption": "決勝トーナメントの試合にはシード情報（A1位、C1位等）が紐づいているはずだ",
+    "question": "FinalResultReportGeneratorで表示する「A1位」「C1位」等のシード情報はどこから取得するか？",
+    "investigation_steps": [
+      "Matchモデルにシード情報フィールドがあるか確認",
+      "Groupモデルからシード情報を導出できるか確認"
+    ],
+    "status": "resolved",
+    "findings": "Matchモデルにhome_seedとaway_seedフィールドを追加した。generate_final_matches関数でシード情報を設定する。",
+    "correct_answer": "Matchモデルにhome_seed, away_seed (VARCHAR(10))を追加。generate_final_matches()で準決勝作成時に'A1位','B1位','C1位','D1位'を設定。FinalResultReportGeneratorはmatch.home_seed/away_seedを表示。",
+    "created_at": "2026-01-02T12:00:00",
+    "resolved_at": "2026-01-02T14:00:00"
+  },
+  {
+    "id": 7,
+    "type": "data_structure",
+    "title": "最終順位・優秀選手データの保存場所",
+    "assumption": "大会終了時に最終順位と優秀選手が登録されるはずだ",
+    "question": "FinalResultReportGeneratorで使用する最終順位(1-4位)と優秀選手データはどこに保存されるか？",
+    "investigation_steps": [
+      "最終順位を保存するテーブルがあるか確認",
+      "優秀選手を保存するテーブルがあるか確認"
+    ],
+    "status": "resolved",
+    "findings": "新たに2つのテーブルを作成: tournament_final_rankings（最終順位）、outstanding_players（優秀選手）",
+    "correct_answer": "1. tournament_final_rankingsテーブル: tournament_id, rank (1-4), team_id。2. outstanding_playersテーブル: tournament_id, award_type (mvp/outstanding), player_name, team_id。FinalResultReportGeneratorはDB優先で読み込み（引数があれば引数優先）。",
+    "created_at": "2026-01-02T12:00:00",
+    "resolved_at": "2026-01-02T14:30:00"
+  },
+  {
+    "id": 8,
+    "type": "data_structure",
+    "title": "背番号のnullable化について",
+    "assumption": "仕様書によると、左列の選手は背番号なしで登録可能とあるが、既存実装ではnullable=Falseになっている",
+    "question": "背番号をnullable=Trueに変更してよいか？既存データとの整合性は？",
+    "investigation_steps": [
+      "既存のplayersテーブルに背番号NULLのレコードがあるか確認",
+      "背番号がNULLの場合の表示ロジックを確認",
+      "得点者サジェストでnumberがNULLの場合の処理を確認"
+    ],
+    "status": "resolved",
+    "findings": "仕様書 3.2節に明記されている: number INTEGER（背番号NULL許容：未定の場合）。SQLiteでは UNIQUE NULLS NOT DISTINCT は動作しない可能性があるため、アプリケーション側でユニーク検証を行う。",
+    "correct_answer": "Playerモデルのnumberをnullable=Trueに変更。背番号重複チェックはアプリケーション側で行う（NULLの場合はスキップ）。表示時は背番号がNULLなら'-'を表示。",
+    "created_at": "2026-01-02T18:00:00",
+    "resolved_at": "2026-01-02T18:00:00"
+  },
+  {
+    "id": 9,
+    "type": "file_format",
+    "title": "参加申込書Excelの列位置",
+    "assumption": "仕様書に記載された列位置（左列: Pos,氏名,前所属,身長,学年 / 右列: 背番号,氏名,前所属,身長,学年）は参考値で、実際のExcelファイルとは異なる可能性がある",
+    "question": "実際の参加申込書Excelファイルの列位置はどうなっているか？",
+    "investigation_steps": [
+      "サンプルExcelファイルがあるか確認",
+      "ヘッダー行の自動検出ロジックを実装して対応",
+      "列位置の手動マッピング機能も提供"
+    ],
+    "status": "pending",
+    "findings": "サンプルExcelファイルは見つからない。仕様書の列位置を参考に、ヘッダー行を自動検出するロジックを実装する。実際のファイルで動作確認が必要。",
+    "correct_answer": "",
+    "created_at": "2026-01-02T18:00:00",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "type": "business_logic",
+    "title": "優秀選手のdisplay_orderフィールド",
+    "assumption": "仕様書のawardsテーブルにはdisplay_orderがあるが、既存のOutstandingPlayerモデルにはない",
+    "question": "既存のOutstandingPlayerモデルにdisplay_orderを追加すべきか？",
+    "investigation_steps": [
+      "既存のOutstandingPlayerモデルを確認",
+      "表示順の管理方法を確認"
+    ],
+    "status": "resolved",
+    "findings": "既存のOutstandingPlayerモデルにはdisplay_orderがない。仕様書では表彰順（1位から12位等）を管理する必要があるため追加が必要。",
+    "correct_answer": "OutstandingPlayerモデルにdisplay_order (INTEGER, default=0)を追加。ドラッグ＆ドロップによる順序変更をサポート。",
+    "created_at": "2026-01-02T18:00:00",
+    "resolved_at": "2026-01-02T18:00:00"
+  }
+]

@@ -1,0 +1,214 @@
+[
+  {
+    "id": 14,
+    "type": "missing_feature",
+    "title": "新規大会作成機能が未実装",
+    "description": "仕様書では「新規大会作成ボタン」からの大会作成フローが定義されているが、実装では既存大会の編集のみ可能",
+    "specification": "ダッシュボードから新規大会作成→基本情報入力→グループ自動生成→会場設定→確定",
+    "implementation": "Settings画面で既存大会のPATCH更新のみ。POST /tournaments の呼び出しUIがない",
+    "priority": "high",
+    "investigation_steps": [
+      "POST /tournaments エンドポイントがバックエンドにあるか確認",
+      "Dashboard.tsxまたはSettings.tsxに新規作成ボタンを追加すべきか決定"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 15,
+    "type": "missing_feature",
+    "title": "会場追加機能が未実装",
+    "description": "Settings.tsxの「会場追加」ボタンがToast「準備中」を表示するだけで機能しない",
+    "specification": "会場設定画面から4-5会場を追加・設定可能",
+    "implementation": "会場編集（PATCH）は実装済み。追加（POST）は準備中Toast",
+    "priority": "high",
+    "investigation_steps": [
+      "POST /venues エンドポイントがバックエンドにあるか確認",
+      "会場追加モーダルUIを実装"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 16,
+    "type": "investigation",
+    "title": "グループ自動生成の実装確認",
+    "description": "大会作成時にグループA/B/C/Dが自動生成されるべきだが、その実装があるか不明",
+    "specification": "大会作成確定後、Groups自動作成（A, B, C, D）",
+    "implementation": "不明。調査が必要",
+    "priority": "medium",
+    "investigation_steps": [
+      "POST /tournaments の実装を確認",
+      "Groupテーブルへの挿入ロジックを確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 17,
+    "type": "investigation",
+    "title": "大会状態遷移ロジックの確認",
+    "description": "Draft→TeamRegistration→ScheduleGeneration等の状態遷移が実装されているか不明",
+    "specification": "大会にはDraft/TeamRegistration/Preliminary等のステータスがあり遷移する",
+    "implementation": "不明。Tournamentモデルにstatusフィールドがあるか確認が必要",
+    "priority": "medium",
+    "investigation_steps": [
+      "Tournamentモデルのstatusフィールドを確認",
+      "状態遷移のトリガーを確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 18,
+    "type": "missing_feature",
+    "title": "チームCSV/Excelインポート機能がUI未接続",
+    "description": "TeamManagement.tsxのCSVインポートボタンがToast「準備中」を表示。バックエンドAPIは存在する可能性",
+    "specification": "CSV/Excelファイル選択→列マッピング→プレビュー→インポート実行",
+    "implementation": "ボタンは存在するがToast表示のみ。TeamApi.importCsvは存在する模様",
+    "priority": "high",
+    "investigation_steps": [
+      "バックエンドのPOST /teams/import-csvを確認",
+      "フロントエンドの接続を実装"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 19,
+    "type": "missing_feature",
+    "title": "選手管理機能が未実装",
+    "description": "仕様書では「チーム詳細→選手管理タブ」から選手登録が可能だが、UIが存在しない",
+    "specification": "参加申込書Excelインポート、個別追加、一覧表示、編集、削除",
+    "implementation": "Settings.tsxに「選手データ管理」セクションがあるがボタンはすべて準備中Toast",
+    "priority": "high",
+    "investigation_steps": [
+      "バックエンドのPlayer APIを確認",
+      "選手管理UIコンポーネントを新規作成するか、既存画面に追加するか決定"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 20,
+    "type": "investigation",
+    "title": "日程手動調整（ドラッグ&ドロップ）の確認",
+    "description": "仕様書では日程をドラッグ&ドロップで調整可能とあるが、実装状況が不明",
+    "specification": "生成された日程をドラッグ&ドロップで時間/会場変更可能",
+    "implementation": "MatchSchedule.tsxにドラッグ&ドロップ機能があるか不明",
+    "priority": "medium",
+    "investigation_steps": [
+      "MatchSchedule.tsxのコードを詳細確認",
+      "react-dnd等のライブラリ使用を確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 21,
+    "type": "investigation",
+    "title": "抽選結果入力UIの確認",
+    "description": "予選で同率が発生した場合の抽選結果入力UIが実装されているか不明",
+    "specification": "同点あれば「抽選結果入力」フォーム→順位確定",
+    "implementation": "不明。Standings.tsxまたは専用画面を確認が必要",
+    "priority": "medium",
+    "investigation_steps": [
+      "Standings関連のコンポーネントを確認",
+      "抽選結果入力APIを確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 22,
+    "type": "missing_feature",
+    "title": "得点者入力機能が未実装",
+    "description": "MatchResult.tsxにスコア入力はあるが、得点者入力（サジェスト付き）が見当たらない",
+    "specification": "時間・チーム選択・得点者入力（サジェスト）→得点経過リスト表示",
+    "implementation": "スコア入力モーダルに得点者入力フィールドがない",
+    "priority": "high",
+    "investigation_steps": [
+      "MatchResult.tsxのモーダル実装を確認",
+      "Goal APIとの連携を確認",
+      "PlayerSuggestionコンポーネントの作成/活用を検討"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 23,
+    "type": "missing_feature",
+    "title": "排他ロック・バージョン競合機能が未実装",
+    "description": "仕様書では複数会場からの同時入力に対応するため排他ロック+楽観的ロックが必要だが、実装が見当たらない",
+    "specification": "排他ロック取得→バージョンチェック→競合時ダイアログ→解決",
+    "implementation": "PUT /matches/{id}/score は単純な更新のみ。ロック/バージョン機構なし",
+    "priority": "high",
+    "investigation_steps": [
+      "バックエンドのlock/unlock APIを確認",
+      "Matchモデルのversionフィールドを確認",
+      "フロントエンドでのロック取得/競合解決UIを実装"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 24,
+    "type": "partial_implementation",
+    "title": "WebSocket試合結果リアルタイム更新",
+    "description": "順位表はWebSocket対応しているが、試合結果のリアルタイム更新が不明",
+    "specification": "スコア保存時にWebSocket通知→全クライアントに即座反映",
+    "implementation": "Standings.tsxにWebSocket接続あり。MatchResult.tsxでの受信は不明",
+    "priority": "medium",
+    "investigation_steps": [
+      "WebSocket接続コードを確認",
+      "試合結果更新時のブロードキャスト実装を確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 25,
+    "type": "enhancement",
+    "title": "報告書生成のバックグラウンドジョブ化",
+    "description": "現在は同期ダウンロードだが、仕様書ではバックグラウンドジョブ+ポーリングが想定されている",
+    "specification": "ジョブ投入→ポーリング（3秒間隔）→完了時ダウンロード",
+    "implementation": "GET /reports/export/pdf は同期的にBlobを返す",
+    "priority": "low",
+    "investigation_steps": [
+      "現在のレスポンス時間を計測",
+      "必要に応じてジョブキュー（Celery等）を導入検討"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 26,
+    "type": "missing_feature",
+    "title": "報告書メール送信機能が未実装",
+    "description": "Reports.tsxの送信先設定がComing Soonで無効化されている",
+    "specification": "固定4送信先（埼玉新聞、テレビ埼玉等）へ自動送信可能",
+    "implementation": "UIはあるが無効化。バックエンドのメール送信APIも不明",
+    "priority": "medium",
+    "investigation_steps": [
+      "SMTP設定の場所を確認",
+      "メール送信APIを確認/実装"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  },
+  {
+    "id": 27,
+    "type": "investigation",
+    "title": "最終日報告書（組み合わせ表・最終結果）の確認",
+    "description": "最終日組み合わせ表、最終結果報告書、優秀選手入力UIの実装状況が不明",
+    "specification": "予選終了後に組み合わせ表出力、大会終了後に最終結果報告書（優秀選手含む）出力",
+    "implementation": "Reports.tsxには日次報告書のみ表示。他の報告書タイプのUIが不明",
+    "priority": "medium",
+    "investigation_steps": [
+      "Reports.tsxの全コードを確認",
+      "バックエンドのレポート生成エンドポイントを確認"
+    ],
+    "status": "pending",
+    "created_at": "2026-01-02T19:00:00"
+  }
+]

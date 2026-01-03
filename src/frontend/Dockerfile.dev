@@ -1,0 +1,21 @@
+# 浦和カップ トーナメント管理システム - フロントエンド開発用Dockerfile
+
+FROM node:20-alpine
+
+# 作業ディレクトリ設定
+WORKDIR /app
+
+# package.jsonとpackage-lock.jsonをコピー
+COPY package*.json ./
+
+# 依存パッケージのインストール
+RUN npm ci
+
+# アプリケーションコードをコピー（開発時はvolumeでマウント）
+COPY . .
+
+# ポート公開
+EXPOSE 5173
+
+# 起動コマンド
+CMD ["npm", "run", "dev", "--", "--host"]

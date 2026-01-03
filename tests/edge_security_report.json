@@ -1,0 +1,98 @@
+{
+  "test_date": "2026-01-01T17:00:27.548327",
+  "summary": {
+    "passed": 16,
+    "issues": 1
+  },
+  "passed": [
+    {
+      "category": "EdgeCase",
+      "test": "empty_team_name",
+      "message": "空のチーム名を適切に拒否"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "long_string",
+      "message": "超長文字列を適切に拒否"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "nonexistent_team",
+      "message": "存在しないチームで404"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "negative_id",
+      "message": "負のIDを適切に処理"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "string_id",
+      "message": "文字列IDを適切に拒否"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "negative_tournament_id",
+      "message": "Status 200"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "unicode_emoji",
+      "message": "特殊文字が正しく保存された"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "html_tags",
+      "message": "特殊文字が正しく保存された"
+    },
+    {
+      "category": "EdgeCase",
+      "test": "sql_chars",
+      "message": "特殊文字が正しく保存された"
+    },
+    {
+      "category": "Security",
+      "test": "auth_bypass_/teams/",
+      "message": "認証が必要（正常）"
+    },
+    {
+      "category": "Security",
+      "test": "auth_bypass_/teams/1",
+      "message": "認証が必要（正常）"
+    },
+    {
+      "category": "Security",
+      "test": "auth_bypass_/matches/1/score",
+      "message": "認証が必要（正常）"
+    },
+    {
+      "category": "Security",
+      "test": "invalid_token",
+      "message": "無効なトークンを拒否"
+    },
+    {
+      "category": "Security",
+      "test": "sql_injection_1 OR 1=1",
+      "message": "不正入力を拒否"
+    },
+    {
+      "category": "Security",
+      "test": "sql_injection_1; DROP TA",
+      "message": "不正入力を拒否"
+    },
+    {
+      "category": "Security",
+      "test": "sql_injection_1' OR '1'=",
+      "message": "不正入力を拒否"
+    }
+  ],
+  "issues": [
+    {
+      "category": "Security",
+      "test": "xss_stored",
+      "message": "スクリプトタグがそのまま保存された（フロントエンドで対処必要）",
+      "severity": "medium",
+      "timestamp": "2026-01-01T17:00:27.548269"
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{# Feature Module Template #}
+{# Variables: feature_name, singular_name, pascal_name, singular_pascal #}
+
+{# ===== api.ts ===== #}
+{% block api %}
+// {{ generated_comment }}
+// src/features/{{ feature_name }}/api.ts
+import { httpClient } from '@/core/http';
+import type { {{ singular_pascal }}, Create{{ singular_pascal }}Input, Update{{ singular_pascal }}Input } from './types';
+
+export const {{ singular_name }}Api = {
+  getAll: async () => {
+    const response = await httpClient.get<{{ singular_pascal }}[]>('/{{ feature_name }}');
+    return response.data;
+  },
+
+  getById: async (id: number) => {
+    const response = await httpClient.get<{{ singular_pascal }}>(`/{{ feature_name }}/${id}`);
+    return response.data;
+  },
+
+  create: async (data: Create{{ singular_pascal }}Input) => {
+    const response = await httpClient.post<{{ singular_pascal }}>('/{{ feature_name }}', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: Update{{ singular_pascal }}Input) => {
+    const response = await httpClient.patch<{{ singular_pascal }}>(`/{{ feature_name }}/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number) => {
+    await httpClient.delete(`/{{ feature_name }}/${id}`);
+  },
+};
+{% endblock %}
+
+{# ===== hooks.ts ===== #}
+{% block hooks %}
+// {{ generated_comment }}
+// src/features/{{ feature_name }}/hooks.ts
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { {{ singular_name }}Api } from './api';
+import type { Create{{ singular_pascal }}Input, Update{{ singular_pascal }}Input } from './types';
+
+const QUERY_KEY = ['{{ feature_name }}'];
+
+export function use{{ pascal_name }}() {
+  return useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: () => {{ singular_name }}Api.getAll(),
+  });
+}
+
+export function use{{ singular_pascal }}(id: number) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, id],
+    queryFn: () => {{ singular_name }}Api.getById(id),
+    enabled: id > 0,
+  });
+}
+
+export function useCreate{{ singular_pascal }}() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Create{{ singular_pascal }}Input) => {{ singular_name }}Api.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
+export function useUpdate{{ singular_pascal }}() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Update{{ singular_pascal }}Input }) =>
+      {{ singular_name }}Api.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
+export function useDelete{{ singular_pascal }}() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => {{ singular_name }}Api.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+{% endblock %}
+
+{# ===== types.ts ===== #}
+{% block types %}
+// {{ generated_comment }}
+// src/features/{{ feature_name }}/types.ts
+
+export interface {{ singular_pascal }} {
+  id: number;
+{% for field in fields %}
+  {{ field.name }}: {{ field.type }};
+{% endfor %}
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Create{{ singular_pascal }}Input {
+{% for field in create_fields %}
+  {{ field.name }}{% if field.optional %}?{% endif %}: {{ field.type }};
+{% endfor %}
+}
+
+export interface Update{{ singular_pascal }}Input {
+{% for field in update_fields %}
+  {{ field.name }}?: {{ field.type }};
+{% endfor %}
+}
+{% endblock %}
+
+{# ===== index.ts ===== #}
+{% block index %}
+// {{ generated_comment }}
+// src/features/{{ feature_name }}/index.ts
+export { {{ singular_name }}Api } from './api';
+export {
+  use{{ pascal_name }},
+  use{{ singular_pascal }},
+  useCreate{{ singular_pascal }},
+  useUpdate{{ singular_pascal }},
+  useDelete{{ singular_pascal }},
+} from './hooks';
+export type { {{ singular_pascal }}, Create{{ singular_pascal }}Input, Update{{ singular_pascal }}Input } from './types';
+{% endblock %}

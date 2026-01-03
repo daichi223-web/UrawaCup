@@ -1,0 +1,10 @@
+import sqlite3
+conn = sqlite3.connect('urawa_cup.db')
+cur = conn.cursor()
+cur.execute('SELECT COUNT(*) FROM goals')
+print('Goals:', cur.fetchone()[0])
+cur.execute('SELECT COUNT(*) FROM players')
+print('Players:', cur.fetchone()[0])
+cur.execute('SELECT id, name FROM teams LIMIT 3')
+for r in cur.fetchall(): print('Team:', r)
+conn.close()

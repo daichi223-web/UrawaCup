@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Match Management</h2>
+
+<div class="mb-3 text-end">
+    <a href="/export/matches" class="btn btn-outline-secondary">Export to CSV</a>
+</div>
+
+<!-- Add Match Section -->
+<div class="card mb-4">
+    <div class="card-header">Add Scheduled Match</div>
+    <div class="card-body">
+        <form action="/matches/add" method="POST" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Day</label>
+                <select name="day" class="form-select" required>
+                    <option value="1">Day 1</option>
+                    <option value="2">Day 2</option>
+                    <option value="3">Day 3</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Group</label>
+                <select name="group" class="form-select">
+                    <option value="A">Group A</option>
+                    <option value="B">Group B</option>
+                    <option value="C">Group C</option>
+                    <option value="D">Group D</option>
+                    <option value="">None (Finals)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Home Team</label>
+                <select name="home_team_id" class="form-select" required>
+                    {% for team in teams %}
+                    <option value="{{ team.id }}">{{ team.name }} ({{ team.group }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Away Team</label>
+                <select name="away_team_id" class="form-select" required>
+                    {% for team in teams %}
+                    <option value="{{ team.id }}">{{ team.name }} ({{ team.group }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-success w-100">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Match List & Result Entry -->
+<h3>Matches</h3>
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Day/Grp</th>
+                <th class="text-end">Home</th>
+                <th class="text-center">Score</th>
+                <th>Away</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for match in matches %}
+            <tr>
+                <form action="/matches/update" method="POST">
+                    <input type="hidden" name="match_id" value="{{ match.id }}">
+                    <td>{{ match.id }}</td>
+                    <td>D{{ match.day }} / {{ match.group }}</td>
+                    <td class="text-end">{{ match.home_team.name }}</td>
+                    <td class="text-center" style="width: 150px;">
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="home_score" class="form-control text-center"
+                                value="{{ match.home_score if match.home_score is not none else '' }}" placeholder="-">
+                            <span class="input-group-text">:</span>
+                            <input type="number" name="away_score" class="form-control text-center"
+                                value="{{ match.away_score if match.away_score is not none else '' }}" placeholder="-">
+                        </div>
+                    </td>
+                    <td>{{ match.away_team.name }}</td>
+                    <td>
+                        <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                    </td>
+                </form>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

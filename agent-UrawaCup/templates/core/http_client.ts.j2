@@ -1,0 +1,30 @@
+// {{ generated_comment }}
+// src/core/http/client.ts
+// 唯一のHTTPクライアント - 全API呼び出しはこれを経由
+import axios from 'axios';
+import { authInterceptor } from './interceptors/auth';
+import { errorInterceptor } from './interceptors/error';
+import { transformInterceptor } from './interceptors/transform';
+
+const httpClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '{{ base_url | default("/api") }}',
+  timeout: {{ timeout | default(10000) }},
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// インターセプター登録（順序重要）
+// 1. 認証ヘッダー付与
+httpClient.interceptors.request.use(authInterceptor);
+
+// 2. リクエスト: camelCase → snake_case
+httpClient.interceptors.request.use(transformInterceptor.request);
+
+// 3. レスポンス: snake_case → camelCase, エラー正規化
+httpClient.interceptors.response.use(
+  transformInterceptor.response,
+  errorInterceptor
+);
+
+export { httpClient };

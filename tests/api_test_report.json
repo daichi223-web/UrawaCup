@@ -1,0 +1,75 @@
+{
+  "test_date": "2026-01-02T17:32:01.847666",
+  "summary": {
+    "success": 0,
+    "errors": 9,
+    "warnings": 0
+  },
+  "successes": [],
+  "errors": [
+    {
+      "endpoint": "/health",
+      "type": "Connection Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:08.720034"
+    },
+    {
+      "endpoint": "/auth/login",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:12.813011"
+    },
+    {
+      "endpoint": "/tournaments",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:16.891451"
+    },
+    {
+      "endpoint": "/tournaments/1",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:20.975376"
+    },
+    {
+      "endpoint": "/teams",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:25.075443"
+    },
+    {
+      "endpoint": "/venues",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:29.160647"
+    },
+    {
+      "endpoint": "/matches",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:33.237011"
+    },
+    {
+      "endpoint": "/standings/1",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:37.319260"
+    },
+    {
+      "endpoint": "/standings/1/top-scorers",
+      "type": "Request Error",
+      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "details": null,
+      "timestamp": "2026-01-02T17:31:41.408909"
+    }
+  ],
+  "warnings": []
+}

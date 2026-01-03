@@ -1,0 +1,6 @@
+# UrawaCup 要件チェックSDK 依存パッケージ
+# Claude Agent SDKを使用した要件チェックツール
+
+# 基本パッケージ（標準ライブラリのみ使用のため追加パッケージは不要）
+# 将来的にClaude Agent SDKを使用する場合は以下を追加
+# claude-agent-sdk>=1.0.0

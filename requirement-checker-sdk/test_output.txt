@@ -1,0 +1,21 @@
+============================================================
+UrawaCup 要件チェックSDK クイックテスト
+============================================================
+Project root: D:\UrawaCup
+Src exists: True
+
+Python files: 49
+TypeScript files: 31
+TSX files: 34
+
+主要ファイル存在チェック:
+  [OK] src/backend/models/team.py
+  [OK] src/backend/models/match.py
+  [OK] src/backend/models/standing.py
+  [OK] src/backend/services/standing_service.py
+  [OK] src/backend/services/report_service.py
+  [OK] src/backend/routes/auth.py
+  [OK] src/backend/utils/auth.py
+  [OK] src/frontend/src/stores/authStore.ts
+
+テスト完了

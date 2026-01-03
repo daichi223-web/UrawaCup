@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第43回浦和カップ 組み合わせ表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Meiryo", "MS Gothic", sans-serif;
+            font-size: 11px;
+            padding: 20px;
+            background: #fff;
+        }
+        h1 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        h2 {
+            font-size: 12px;
+            margin: 20px 0 10px 0;
+            font-weight: bold;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin: 25px 0 15px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #000;
+        }
+
+        /* 順位リーグ 4会場横並び */
+        .league-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .venue-block {
+            flex: 1;
+            min-width: 220px;
+        }
+        .venue-title {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-align: center;
+            background: #f0f0f0;
+            padding: 3px;
+            border: 1px solid #333;
+        }
+
+        /* 試合テーブル */
+        .match-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .match-table th {
+            background: #e8e8e8;
+            border: 1px solid #333;
+            padding: 2px 4px;
+            font-weight: normal;
+            text-align: center;
+        }
+        .match-table td {
+            border: 1px solid #333;
+            padding: 2px 4px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .match-table .match-num {
+            width: 20px;
+            background: #f8f8f8;
+        }
+        .match-table .kickoff {
+            width: 40px;
+        }
+        .match-table .team {
+            min-width: 55px;
+        }
+        .match-table .vs {
+            width: 15px;
+        }
+        .match-table .referee {
+            width: 50px;
+            font-size: 9px;
+        }
+        .match-table .rank-info {
+            font-size: 8px;
+            color: #666;
+        }
+
+        /* 審判セル */
+        .referee-cell {
+            text-align: left;
+            padding-left: 3px !important;
+        }
+        .referee-label {
+            font-size: 9px;
+        }
+
+        /* 会場担当 */
+        .venue-staff {
+            margin-top: 5px;
+            font-size: 10px;
+            padding: 3px;
+            background: #fff8dc;
+            border: 1px solid #999;
+        }
+
+        /* 決勝トーナメント */
+        .finals-container {
+            margin-top: 20px;
+        }
+        .finals-venue {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .finals-table {
+            width: 500px;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        .finals-table th {
+            background: #e8e8e8;
+            border: 1px solid #333;
+            padding: 3px 5px;
+            font-weight: normal;
+        }
+        .finals-table td {
+            border: 1px solid #333;
+            padding: 3px 5px;
+            text-align: center;
+        }
+        .finals-table .match-type {
+            background: #fffacd;
+            font-weight: bold;
+        }
+        .finals-table .venue-cell {
+            background: #f0f8ff;
+            font-size: 9px;
+        }
+
+        @media print {
+            body {
+                padding: 10px;
+            }
+            .league-container {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>第43回浦和カップ高校サッカーフェスティバル 組み合わせ及び日程表</h1>
+
+<!-- 順位リーグ -->
+<div class="section-title">3月31日（日）【順位リーグ】</div>
+
+<div class="league-container">
+    <!-- 浦和南高G -->
+    <div class="venue-block">
+        <div class="venue-title">浦和南高G</div>
+        <table class="match-table">
+            <tr>
+                <th></th>
+                <th>ｷｯｸｵﾌ</th>
+                <th colspan="3">対　戦</th>
+                <th>審　判</th>
+            </tr>
+            <tr>
+                <td class="match-num">1</td>
+                <td class="kickoff">9:30</td>
+                <td class="team">浦和南<br><span class="rank-info">4位③</span></td>
+                <td class="vs">－</td>
+                <td class="team">日本文理<br><span class="rank-info">5位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">2</td>
+                <td class="kickoff">10:35</td>
+                <td class="team">明秀日立<br><span class="rank-info">3位③</span></td>
+                <td class="vs">－</td>
+                <td class="team">日本文理<br><span class="rank-info">5位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">3</td>
+                <td class="kickoff">11:40</td>
+                <td class="team">健大高崎<br><span class="rank-info">6位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">浦和南<br><span class="rank-info">4位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">4</td>
+                <td class="kickoff">12:45</td>
+                <td class="team">浦和西<br><span class="rank-info">6位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">明秀日立<br><span class="rank-info">3位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">5</td>
+                <td class="kickoff">13:50</td>
+                <td class="team">浦和西<br><span class="rank-info">6位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">健大高崎<br><span class="rank-info">6位②</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+        </table>
+        <div class="venue-staff">会場担当　浦和南</div>
+    </div>
+
+    <!-- 市立浦和高G -->
+    <div class="venue-block">
+        <div class="venue-title">市立浦和高G</div>
+        <table class="match-table">
+            <tr>
+                <th></th>
+                <th>ｷｯｸｵﾌ</th>
+                <th colspan="3">対　戦</th>
+                <th>審　判</th>
+            </tr>
+            <tr>
+                <td class="match-num">1</td>
+                <td class="kickoff">9:00</td>
+                <td class="team">野辺地西<br><span class="rank-info">C1位</span></td>
+                <td class="vs">－</td>
+                <td class="team">日大明誠<br><span class="rank-info">D1位</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">2</td>
+                <td class="kickoff">10:05</td>
+                <td class="team">市立浦和<br><span class="rank-info">4位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">敬愛学園<br><span class="rank-info">2位②</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">3</td>
+                <td class="kickoff">11:10</td>
+                <td class="team">佐野日大<br><span class="rank-info">3位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">県立浦和<br><span class="rank-info">4位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">4</td>
+                <td class="kickoff">12:15</td>
+                <td class="team">敬愛学園<br><span class="rank-info">2位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">大宮U18<br><span class="rank-info">3位②</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">5</td>
+                <td class="kickoff">13:20</td>
+                <td class="team">市立浦和<br><span class="rank-info">4位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">佐野日大<br><span class="rank-info">3位④</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+        </table>
+        <div class="venue-staff">会場担当　市立浦和</div>
+    </div>
+
+    <!-- 浦和学院高G -->
+    <div class="venue-block">
+        <div class="venue-title">浦和学院高G</div>
+        <table class="match-table">
+            <tr>
+                <th></th>
+                <th>ｷｯｸｵﾌ</th>
+                <th colspan="3">対　戦</th>
+                <th>審　判</th>
+            </tr>
+            <tr>
+                <td class="match-num">1</td>
+                <td class="kickoff">9:30</td>
+                <td class="team">浦和学院<br><span class="rank-info">5位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">新潟西<br><span class="rank-info">6位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">2</td>
+                <td class="kickoff">10:35</td>
+                <td class="team">旭川実業<br><span class="rank-info">5位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">東海大相模<br><span class="rank-info">6位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">3</td>
+                <td class="kickoff">11:40</td>
+                <td class="team">浦和東<br><span class="rank-info">4位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">新潟西<br><span class="rank-info">6位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">4</td>
+                <td class="kickoff">12:45</td>
+                <td class="team">旭川実業<br><span class="rank-info">5位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">浦和学院<br><span class="rank-info">5位④</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">5</td>
+                <td class="kickoff">13:50</td>
+                <td class="team">旭川実業<br><span class="rank-info">5位②</span></td>
+                <td class="vs">－</td>
+                <td class="team">浦和東<br><span class="rank-info">4位②</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+        </table>
+        <div class="venue-staff">会場担当　浦和学院</div>
+    </div>
+
+    <!-- 武南高G -->
+    <div class="venue-block">
+        <div class="venue-title">武南高G</div>
+        <table class="match-table">
+            <tr>
+                <th></th>
+                <th>ｷｯｸｵﾌ</th>
+                <th colspan="3">対　戦</th>
+                <th>審　判</th>
+            </tr>
+            <tr>
+                <td class="match-num">1</td>
+                <td class="kickoff">9:30</td>
+                <td class="team">武南<br><span class="rank-info">2位③</span></td>
+                <td class="vs">－</td>
+                <td class="team">聖和学園<br><span class="rank-info">5位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">2</td>
+                <td class="kickoff">10:35</td>
+                <td class="team">國學院久我山<br><span class="rank-info">2位①</span></td>
+                <td class="vs">－</td>
+                <td class="team">韮崎<br><span class="rank-info">3位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">3</td>
+                <td class="kickoff">11:40</td>
+                <td class="team">中央学院<br><span class="rank-info">2位④</span></td>
+                <td class="vs">－</td>
+                <td class="team">武南<br><span class="rank-info">2位③</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">4</td>
+                <td class="kickoff">12:45</td>
+                <td class="team">聖和学園<br><span class="rank-info">5位③</span></td>
+                <td class="vs">－</td>
+                <td class="team">韮崎<br><span class="rank-info">3位①</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="match-num">5</td>
+                <td class="kickoff">13:50</td>
+                <td class="team">國學院久我山<br><span class="rank-info">2位①</span></td>
+                <td class="vs">－</td>
+                <td class="team">中央学院<br><span class="rank-info">2位④</span></td>
+                <td class="referee-cell">
+                    <span class="referee-label">主審</span><br>
+                    <span class="referee-label">副審 当該</span>
+                </td>
+            </tr>
+        </table>
+        <div class="venue-staff">会場担当　武南</div>
+    </div>
+</div>
+
+<!-- 3位決定戦・決勝戦 -->
+<div class="section-title">3月31日（日）【3決・決勝戦】</div>
+
+<div class="finals-container">
+    <div class="finals-venue">駒場スタジアム（RHF駒場）</div>
+    <table class="finals-table">
+        <tr>
+            <th></th>
+            <th>ｷｯｸｵﾌ</th>
+            <th colspan="3">対　戦</th>
+            <th>審　判</th>
+        </tr>
+        <tr>
+            <td class="match-num">1</td>
+            <td>9:00</td>
+            <td class="team">ツエーゲン金沢<br><span class="rank-info">A1位</span></td>
+            <td class="vs">－</td>
+            <td class="team">浦和RY<br><span class="rank-info">B1位</span></td>
+            <td class="referee-cell">
+                <span class="referee-label">主審 派遣　会場担当</span><br>
+                <span class="referee-label">副審 当該　浦和RY</span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="6" class="venue-cell">RHF駒場（サブグラウンド）</td>
+        </tr>
+        <tr>
+            <td class="match-num">2</td>
+            <td>10:05</td>
+            <td class="match-type" colspan="3">研修</td>
+            <td class="referee-cell">
+                <span class="referee-label">主審 当該</span><br>
+                <span class="referee-label">副審 当該</span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="6" class="venue-cell">駒場スタジアム</td>
+        </tr>
+        <tr>
+            <td class="match-num">3</td>
+            <td>12:00</td>
+            <td class="team">浦和RY<br><span class="rank-info">B1位</span></td>
+            <td class="vs">－</td>
+            <td class="team">日大明誠<br><span class="rank-info">D1位</span></td>
+            <td class="referee-cell">
+                <span class="referee-label">主審 派遣</span><br>
+                <span class="referee-label">副審 派遣</span>
+            </td>
+        </tr>
+        <tr>
+            <td class="match-type" colspan="6" style="background:#ffe4b5;">3位決定戦</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="venue-cell">駒場スタジアム</td>
+        </tr>
+        <tr>
+            <td class="match-num">4</td>
+            <td>13:05</td>
+            <td class="team">ツエーゲン金沢<br><span class="rank-info">A1位</span></td>
+            <td class="vs">－</td>
+            <td class="team">野辺地西<br><span class="rank-info">C1位</span></td>
+            <td class="referee-cell">
+                <span class="referee-label">主審 派遣</span><br>
+                <span class="referee-label">副審 派遣</span>
+            </td>
+        </tr>
+        <tr>
+            <td class="match-type" colspan="6" style="background:#ffd700;">決勝戦</td>
+        </tr>
+    </table>
+</div>
+
+</body>
+</html>

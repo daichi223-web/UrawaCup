@@ -1,0 +1,10 @@
+name,short_name,team_type,is_venue_host,group_id,group_order,prefecture,notes
+浦和南高校,浦和南,local,true,A,1,埼玉県,会場担当校
+市立浦和高校,市浦和,local,true,B,1,埼玉県,会場担当校
+浦和学院,浦和学,local,true,C,1,埼玉県,会場担当校
+武南高校,武南,local,true,D,1,埼玉県,会場担当校
+大宮アルディージャU18,大宮U18,local,false,A,2,埼玉県,
+正智深谷高校,正智深,invited,false,A,3,埼玉県,
+東海大高輪台高校,高輪台,invited,false,A,4,東京都,
+青森山田高校,青森山田,invited,false,A,5,青森県,
+帝京高校,帝京,invited,false,A,6,東京都,

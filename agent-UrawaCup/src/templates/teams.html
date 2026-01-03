@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Team Management</h2>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Add New Team</div>
+            <div class="card-body">
+                <form action="/teams" method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Team Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="group" class="form-label">Group</label>
+                        <select class="form-select" id="group" name="group" required>
+                            <option value="A">Group A</option>
+                            <option value="B">Group B</option>
+                            <option value="C">Group C</option>
+                            <option value="D">Group D</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="is_local" name="is_local">
+                        <label class="form-check-label" for="is_local">Local Team</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Team</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Registered Teams</div>
+            <div class="card-body">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Group</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in teams %}
+                        <tr>
+                            <td>{{ team.id }}</td>
+                            <td>{{ team.name }}</td>
+                            <td>{{ team.group }}</td>
+                            <td>
+                                {% if team.is_local %}
+                                <span class="badge bg-success">Local</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Invited</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

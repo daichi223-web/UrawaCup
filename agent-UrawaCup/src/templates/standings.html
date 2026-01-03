@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Group Standings</h2>
+
+{% for group, group_teams in standings.items() %}
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">Group {{ group }}</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Pos</th>
+                        <th>Team</th>
+                        <th>Pld</th>
+                        <th>W</th>
+                        <th>D</th>
+                        <th>L</th>
+                        <th>GF</th>
+                        <th>GA</th>
+                        <th>GD</th>
+                        <th>Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for standing in group_teams %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ standing.team.name }}</td>
+                        <td>{{ standing.played }}</td>
+                        <td>{{ standing.won }}</td>
+                        <td>{{ standing.drawn }}</td>
+                        <td>{{ standing.lost }}</td>
+                        <td>{{ standing.goals_for }}</td>
+                        <td>{{ standing.goals_against }}</td>
+                        <td>{{ standing.goal_diff }}</td>
+                        <td class="fw-bold">{{ standing.points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
