@@ -440,6 +440,371 @@ API呼び出しでN+1問題がないか確認：
         "tools": ["Bash"],
         "category": "security"
     },
+    # ========== API・リクエスト系 ==========
+    {
+        "id": "T026",
+        "name": "リクエストヘッダー確認",
+        "prompt": """
+APIリクエストに適切なヘッダーが設定されているか確認：
+
+1. httpClient の設定を確認 (src/frontend/src/core/http.ts)
+2. Content-Type: application/json が設定されているか
+3. 認証ヘッダー（Authorization）の設定があるか
+
+問題があれば報告
+""",
+        "tools": ["Read", "Grep"],
+        "category": "api"
+    },
+    {
+        "id": "T027",
+        "name": "タイムアウト処理確認",
+        "prompt": """
+APIリクエストのタイムアウト処理が実装されているか確認：
+
+1. axios/fetch の timeout 設定を確認
+2. タイムアウト時のエラーハンドリングがあるか確認
+
+grep -r "timeout" src/frontend/src/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "api"
+    },
+    {
+        "id": "T028",
+        "name": "重複リクエスト防止",
+        "prompt": """
+同一リクエストの連続送信を防止しているか確認：
+
+1. ボタン連打時に複数リクエストが飛ばないか
+2. disabled 属性やローディング状態での制御があるか
+3. isPending, isLoading 等での制御を確認
+
+対象: 保存ボタン、送信ボタン等
+""",
+        "tools": ["Grep", "Read"],
+        "category": "api"
+    },
+    # ========== データ処理系 ==========
+    {
+        "id": "T029",
+        "name": "Null/Undefined処理",
+        "prompt": """
+null/undefined の適切な処理を確認：
+
+1. オプショナルチェイニング (?.) の使用を確認
+2. デフォルト値 (?? や ||) の設定を確認
+3. APIレスポンスの null チェックがあるか
+
+grep -r "\\?\\." src/frontend/src/pages/ | head -20
+grep -r "\\?\\?" src/frontend/src/pages/ | head -20
+""",
+        "tools": ["Grep"],
+        "category": "data"
+    },
+    {
+        "id": "T030",
+        "name": "空配列ハンドリング",
+        "prompt": """
+データ0件時の表示が適切か確認：
+
+1. matches.length === 0 の場合の表示を確認
+2. teams.length === 0 の場合の表示を確認
+3. 「データがありません」等のメッセージがあるか
+
+grep -r "length === 0" src/frontend/src/
+grep -r "データがありません" src/frontend/src/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "data"
+    },
+    {
+        "id": "T031",
+        "name": "日付フォーマット確認",
+        "prompt": """
+日付表示のフォーマットが統一されているか確認：
+
+1. 日付表示のフォーマット関数を検索
+2. toLocaleDateString, format 等の使用を確認
+3. 一貫したフォーマット (YYYY-MM-DD 等) になっているか
+
+grep -r "toLocaleDateString\\|formatDate\\|format(" src/frontend/src/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "data"
+    },
+    # ========== 状態管理系 ==========
+    {
+        "id": "T032",
+        "name": "初期状態の妥当性",
+        "prompt": """
+useStateの初期値が適切か確認：
+
+1. フォームの初期値が空文字や0で適切か
+2. 配列の初期値が [] になっているか
+3. オブジェクトの初期値が null か {} か確認
+
+grep -r "useState\\(" src/frontend/src/pages/ | head -30
+""",
+        "tools": ["Grep", "Read"],
+        "category": "state"
+    },
+    {
+        "id": "T033",
+        "name": "フォームリセット確認",
+        "prompt": """
+モーダルを閉じた時やキャンセル時にフォームがリセットされるか確認：
+
+1. onClose 時に state をリセットしているか
+2. 編集モーダルを閉じて再度開いた時に前の値が残らないか
+
+対象: MatchEditModal.tsx, Settings.tsx 等
+""",
+        "tools": ["Read", "Grep"],
+        "category": "state"
+    },
+    {
+        "id": "T034",
+        "name": "useEffectクリーンアップ",
+        "prompt": """
+useEffect のクリーンアップ関数が適切に実装されているか確認：
+
+1. setInterval, setTimeout のクリアがあるか
+2. イベントリスナーの解除があるか
+3. AbortController でリクエストキャンセルしているか
+
+grep -r "return () =>" src/frontend/src/
+grep -r "clearInterval\\|clearTimeout" src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "state"
+    },
+    # ========== UI/UX系 ==========
+    {
+        "id": "T035",
+        "name": "空状態表示確認",
+        "prompt": """
+各一覧画面でデータが0件の時の表示を確認：
+
+1. MatchResult.tsx - 試合がない場合
+2. MatchSchedule.tsx - 試合がない場合
+3. Settings.tsx - 会場がない場合
+
+「〇〇がありません」のような案内があるか確認
+""",
+        "tools": ["Read", "Grep"],
+        "category": "ux"
+    },
+    {
+        "id": "T036",
+        "name": "確認ダイアログ確認",
+        "prompt": """
+破壊的操作（削除等）の前に確認ダイアログがあるか確認：
+
+1. 削除ボタンクリック時に confirm() があるか
+2. 自動生成時に既存データ上書きの警告があるか
+
+grep -r "confirm(" src/frontend/src/
+grep -r "削除しますか\\|上書き" src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "ux"
+    },
+    {
+        "id": "T037",
+        "name": "トースト通知確認",
+        "prompt": """
+操作後のフィードバック（成功/エラー通知）があるか確認：
+
+1. toast.success, toast.error の使用を確認
+2. 保存成功時の通知があるか
+3. エラー時の通知があるか
+
+grep -r "toast\\." src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "ux"
+    },
+    # ========== エラー処理系（拡張） ==========
+    {
+        "id": "T038",
+        "name": "500エラー処理確認",
+        "prompt": """
+サーバーエラー（500系）時の処理を確認：
+
+1. try-catch でエラーをキャッチしているか
+2. エラーメッセージをユーザーに表示しているか
+3. エラー状態の管理（error state）があるか
+
+grep -r "catch.*error\\|setError\\|error:" src/frontend/src/pages/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "error"
+    },
+    # ========== コード品質系（拡張） ==========
+    {
+        "id": "T039",
+        "name": "any型使用検出",
+        "prompt": """
+TypeScriptでany型が使用されている箇所を検出：
+
+1. 明示的な any の使用
+2. 暗黙の any（型推論できない箇所）
+
+grep -r ": any\\|as any" src/frontend/src/ --include="*.ts" --include="*.tsx"
+""",
+        "tools": ["Grep"],
+        "category": "quality"
+    },
+    {
+        "id": "T040",
+        "name": "TODO/FIXME残存確認",
+        "prompt": """
+未対応のTODO/FIXMEコメントがないか確認：
+
+grep -r "TODO\\|FIXME\\|XXX\\|HACK" src/frontend/src/ src/backend/
+""",
+        "tools": ["Grep"],
+        "category": "quality"
+    },
+    {
+        "id": "T041",
+        "name": "マジックナンバー検出",
+        "prompt": """
+意味不明な数値リテラル（マジックナンバー）がないか確認：
+
+1. タイムアウト値、リトライ回数等が定数化されているか
+2. ステータスコード（200, 404等）が定数化されているか
+
+問題のある箇所があれば報告
+""",
+        "tools": ["Grep", "Read"],
+        "category": "quality"
+    },
+    # ========== パフォーマンス系（拡張） ==========
+    {
+        "id": "T042",
+        "name": "useMemo/useCallback使用確認",
+        "prompt": """
+再レンダリング最適化が適切に行われているか確認：
+
+1. 重い計算に useMemo が使われているか
+2. コールバック関数に useCallback が使われているか
+3. 特に一覧表示やフィルター処理
+
+grep -r "useMemo\\|useCallback" src/frontend/src/pages/
+""",
+        "tools": ["Grep"],
+        "category": "performance"
+    },
+    {
+        "id": "T043",
+        "name": "バンドルサイズ確認",
+        "prompt": """
+ビルド後のバンドルサイズを確認：
+
+1. npm run build を実行
+2. 各チャンクのサイズを確認
+3. 500KB以上の大きなチャンクがないか確認
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "performance"
+    },
+    # ========== セキュリティ系（拡張） ==========
+    {
+        "id": "T044",
+        "name": "XSS脆弱性確認",
+        "prompt": """
+XSS脆弱性がないか確認：
+
+1. dangerouslySetInnerHTML の使用箇所を確認
+2. ユーザー入力をそのまま表示している箇所を確認
+
+grep -r "dangerouslySetInnerHTML" src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "security"
+    },
+    {
+        "id": "T045",
+        "name": "機密情報露出確認",
+        "prompt": """
+APIキーや機密情報がフロントエンドに露出していないか確認：
+
+1. .env ファイルの内容を確認
+2. ハードコードされた認証情報がないか
+
+grep -r "API_KEY\\|SECRET\\|PASSWORD\\|apiKey\\|secret" src/frontend/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "security"
+    },
+    # ========== E2Eシナリオ系 ==========
+    {
+        "id": "T046",
+        "name": "CRUD完全フロー確認",
+        "prompt": """
+会場のCRUD操作が一貫して動作するか確認：
+
+1. 会場一覧取得
+2. 会場作成 (POST)
+3. 作成した会場の取得 (GET)
+4. 会場更新 (PATCH)
+5. 会場削除 (DELETE)
+
+各操作が正常に動作するか確認
+""",
+        "tools": ["Bash"],
+        "category": "e2e"
+    },
+    {
+        "id": "T047",
+        "name": "複数フィルター組合せ確認",
+        "prompt": """
+複数のフィルターを組み合わせた時に正常に動作するか確認：
+
+1. 日付フィルター + 会場フィルター の組合せ
+2. 日付フィルター + ステータスフィルター の組合せ
+3. 全フィルター解除で全件表示されるか
+
+API呼び出しで確認
+""",
+        "tools": ["Bash"],
+        "category": "e2e"
+    },
+    # ========== アクセシビリティ系 ==========
+    {
+        "id": "T048",
+        "name": "label紐付け確認",
+        "prompt": """
+フォーム要素に適切なlabelが紐付いているか確認：
+
+1. <label htmlFor="..."> の使用を確認
+2. input要素に id が設定されているか
+3. aria-label の使用を確認
+
+grep -r "htmlFor\\|aria-label" src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "a11y"
+    },
+    {
+        "id": "T049",
+        "name": "フォーカス管理確認",
+        "prompt": """
+キーボード操作とフォーカス管理を確認：
+
+1. モーダルオープン時にフォーカスが移動するか
+2. Tab キーで要素を巡回できるか
+3. autoFocus の使用を確認
+
+grep -r "autoFocus\\|focus()" src/frontend/src/
+""",
+        "tools": ["Grep"],
+        "category": "a11y"
+    },
 ]
 
 
@@ -735,6 +1100,11 @@ def main():
   performance     - パフォーマンス
   ux              - UX/ローディング
   security        - セキュリティ
+  api             - API・リクエスト
+  state           - 状態管理
+  quality         - コード品質
+  e2e             - E2Eシナリオ
+  a11y            - アクセシビリティ
 
 使用例:
   python agent_check.py                    # 全テスト実行
