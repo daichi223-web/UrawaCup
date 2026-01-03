@@ -509,48 +509,49 @@ function MatchSchedule() {
               )}
             </div>
           ) : (
-            // 通常の試合一覧（会場別）
-            <div className="space-y-6">
+            // 通常の試合一覧（会場別カード表示）
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {venues.map(venue => {
                 const venueMatches = filteredMatches.filter(m => m.venueId === venue.id)
                 if (venueMatches.length === 0) return null
 
+                // 会場ごとの配色
+                const venueColors = {
+                  A: { bg: 'bg-red-50', border: 'border-red-200', header: 'bg-red-100 text-red-800', dot: 'bg-red-500' },
+                  B: { bg: 'bg-blue-50', border: 'border-blue-200', header: 'bg-blue-100 text-blue-800', dot: 'bg-blue-500' },
+                  C: { bg: 'bg-green-50', border: 'border-green-200', header: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
+                  D: { bg: 'bg-yellow-50', border: 'border-yellow-200', header: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' },
+                  default: { bg: 'bg-purple-50', border: 'border-purple-200', header: 'bg-purple-100 text-purple-800', dot: 'bg-purple-500' },
+                }
+                const colors = venueColors[venue.groupId as keyof typeof venueColors] || venueColors.default
+
                 return (
-                  <div key={venue.id}>
-                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <span className={`w-3 h-3 rounded-full ${
-                        venue.groupId === 'A' ? 'bg-red-500' :
-                        venue.groupId === 'B' ? 'bg-blue-500' :
-                        venue.groupId === 'C' ? 'bg-green-500' :
-                        venue.groupId === 'D' ? 'bg-yellow-500' : 'bg-gray-500'
-                      }`} />
-                      {venue.name}
-                      {venue.groupId && <span className="text-sm text-gray-500">({venue.groupId}グループ)</span>}
-                    </h3>
-                    <div className="grid gap-2">
+                  <div key={venue.id} className={`rounded-lg border-2 ${colors.border} ${colors.bg} overflow-hidden`}>
+                    {/* 会場ヘッダー */}
+                    <div className={`px-4 py-2 ${colors.header} font-semibold flex items-center gap-2`}>
+                      <span className={`w-3 h-3 rounded-full ${colors.dot}`} />
+                      <span>{venue.name}</span>
+                      {venue.groupId && <span className="text-xs opacity-75">({venue.groupId}組)</span>}
+                      <span className="ml-auto text-xs font-normal opacity-75">{venueMatches.length}試合</span>
+                    </div>
+                    {/* 試合リスト */}
+                    <div className="p-2 space-y-1">
                       {venueMatches.map(match => (
                         <div
                           key={match.id}
-                          className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          className="p-2 bg-white rounded border border-gray-200 hover:shadow-md cursor-pointer transition-shadow"
                           onClick={() => setSelectedMatch(match)}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-gray-500 w-8">
-                                #{match.matchOrder}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {match.matchTime}
-                              </span>
-                            </div>
+                          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span>#{match.matchOrder} {match.matchTime}</span>
                             <StatusBadge status={match.status} />
                           </div>
-                          <div className="flex items-center justify-center gap-4 mt-2">
-                            <span className="font-medium flex-1 text-right">{match.homeTeam?.name}</span>
-                            <span className="text-xl font-bold px-4 py-1 bg-gray-100 rounded">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium truncate flex-1">{match.homeTeam?.name}</span>
+                            <span className="mx-2 font-bold text-gray-700">
                               {match.homeScoreTotal ?? '-'} - {match.awayScoreTotal ?? '-'}
                             </span>
-                            <span className="font-medium flex-1 text-left">{match.awayTeam?.name}</span>
+                            <span className="font-medium truncate flex-1 text-right">{match.awayTeam?.name}</span>
                           </div>
                         </div>
                       ))}
