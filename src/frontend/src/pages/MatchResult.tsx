@@ -29,8 +29,12 @@ function MatchResult() {
   const [saving, setSaving] = useState(false);
 
   // Filters
-  const [dayFilter, setDayFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [venueFilter, setVenueFilter] = useState('');
+
+  // 動的データ
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [availableVenues, setAvailableVenues] = useState<{id: number, name: string}[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
 
   // Modal state
@@ -51,15 +55,61 @@ function MatchResult() {
   const [suggestions, setSuggestions] = useState<PlayerSuggestion[]>([]);
   const [activeGoalId, setActiveGoalId] = useState<string | null>(null);
 
+  // 初回: 全試合を取得して日付・会場リストを抽出
   useEffect(() => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        const data = await matchApi.getMatches({});
+        const allMatches = data.matches;
+
+        // 日付リストを抽出（重複排除・ソート）
+        const dates = [...new Set(allMatches.map(m => m.matchDate))].sort();
+        setAvailableDates(dates);
+
+        // 会場リストを抽出（重複排除）
+        const venueMap = new Map<number, string>();
+        allMatches.forEach(m => {
+          if (m.venue?.id && m.venue?.name) {
+            venueMap.set(m.venue.id, m.venue.name);
+          }
+        });
+        setAvailableVenues(Array.from(venueMap.entries()).map(([id, name]) => ({ id, name })));
+
+        setMatches(allMatches);
+      } catch (err) {
+        console.error(err);
+        setError('試合データの取得に失敗しました');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInitialData();
+  }, []);
+
+  // フィルター変更時: 再取得
+  useEffect(() => {
+    if (availableDates.length === 0) return; // 初回ロード前はスキップ
     fetchMatches();
-  }, [dayFilter, venueFilter, statusFilter]);
+  }, [dateFilter, venueFilter, statusFilter]);
 
   const fetchMatches = async () => {
     setLoading(true);
     setError(null);
     try {
       const params: Record<string, unknown> = {};
+
+      // 日付フィルター
+      if (dateFilter) {
+        params.match_date = dateFilter;
+      }
+
+      // 会場フィルター
+      if (venueFilter) {
+        params.venue_id = parseInt(venueFilter);
+      }
+
+      // ステータスフィルター
       if (statusFilter === 'pending') {
         params.status = 'scheduled';
       } else if (statusFilter === 'completed') {
@@ -245,13 +295,15 @@ function MatchResult() {
               <label className="form-label">日付</label>
               <select
                 className="form-input"
-                value={dayFilter}
-                onChange={(e) => setDayFilter(e.target.value)}
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
               >
-                <option value="">日付を選択</option>
-                <option value="day1">Day1 (予選)</option>
-                <option value="day2">Day2 (予選)</option>
-                <option value="day3">Day3 (決勝T)</option>
+                <option value="">全日程</option>
+                {availableDates.map((date, idx) => (
+                  <option key={date} value={date}>
+                    Day{idx + 1} ({date})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex-1">
@@ -262,10 +314,11 @@ function MatchResult() {
                 onChange={(e) => setVenueFilter(e.target.value)}
               >
                 <option value="">全会場</option>
-                <option value="urawa-minami">浦和南高G</option>
-                <option value="ichiritu">市立浦和高G</option>
-                <option value="uragaku">浦和学院G</option>
-                <option value="bunan">武南高G</option>
+                {availableVenues.map((venue) => (
+                  <option key={venue.id} value={venue.id}>
+                    {venue.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="flex-1">

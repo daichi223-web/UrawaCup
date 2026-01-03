@@ -189,6 +189,257 @@ Settings.tsxで会場保存時にsnake_caseで送信しているか確認して�
         "tools": ["Grep", "Read"],
         "category": "dragdrop"
     },
+    # ========== 新規追加: UI-API整合性テスト ==========
+    {
+        "id": "T012",
+        "name": "フィルターUI→API連携確認",
+        "prompt": """
+フィルターUIの値が実際にAPIリクエストに使われているか確認してください：
+
+1. MatchResult.tsx を読んで以下を確認：
+   - フィルター用のuseState（dateFilter, venueFilter, statusFilter等）が定義されているか
+   - fetchMatches関数内でこれらのフィルター値がAPIパラメータとして使われているか
+   - フィルター変更時にfetchMatchesが呼ばれるか（useEffect確認）
+
+2. MatchSchedule.tsx を読んで以下を確認：
+   - フィルターUIとAPI呼び出しが連携しているか
+
+3. 問題があれば報告（useState定義のみで実際には使われていない等）
+""",
+        "tools": ["Read", "Grep"],
+        "category": "ui-api"
+    },
+    {
+        "id": "T013",
+        "name": "ハードコード値検出",
+        "prompt": """
+フロントエンドでハードコードされている値を検出してください：
+
+1. 以下のパターンをgrepで検索：
+   - 会場名のハードコード: "浦和南", "市立浦和", "浦和学院", "武南", "駒場"
+   - 日付のハードコード: "day1", "day2", "day3", "Day1", "Day2", "Day3"
+   - チーム名のハードコード
+
+2. 検出したファイルを確認し、動的に取得すべき箇所か判定
+
+3. 問題のある箇所を報告（ファイル名:行番号）
+
+検索対象: D:/UrawaCup/src/frontend/src/
+""",
+        "tools": ["Grep", "Read"],
+        "category": "ui-api"
+    },
+    {
+        "id": "T014",
+        "name": "API応答とUI表示の整合性",
+        "prompt": """
+APIレスポンスのフィールド名とフロントエンドの期待値が一致しているか確認：
+
+1. 会場API (/api/venues/) のレスポンスを取得
+2. src/frontend/src/features/venues/types.ts のVenue型定義を確認
+3. フィールド名の不一致がないか確認（snake_case vs camelCase）
+
+4. 試合API (/api/matches/) のレスポンスを取得
+5. src/shared/types/index.ts のMatchWithDetails型定義を確認
+6. フィールド名の不一致がないか確認
+
+問題があれば詳細を報告
+""",
+        "tools": ["Bash", "Read"],
+        "category": "ui-api"
+    },
+    # ========== 新規追加: データ整合性テスト ==========
+    {
+        "id": "T015",
+        "name": "画面間データ整合性",
+        "prompt": """
+異なる画面で同じデータが一貫して表示されるか確認：
+
+1. 試合一覧API (/api/matches/?tournament_id=1) で試合数を取得
+2. 試合結果入力画面の表示数と一致するか確認
+3. 試合日程画面の表示数と一致するか確認
+
+4. チーム一覧API (/api/teams/?tournament_id=1) でチーム数を取得
+5. 順位表画面のチーム数と一致するか確認
+
+整合性に問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "data"
+    },
+    {
+        "id": "T016",
+        "name": "試合ステージ別表示確認",
+        "prompt": """
+試合のステージ（予選/準決勝/3決/決勝/研修）が正しく分類されているか確認：
+
+1. /api/matches/?tournament_id=1 で全試合取得
+2. stage別に試合数をカウント
+3. 最終日の試合構成を確認:
+   - semifinal: 2試合
+   - third_place: 1試合
+   - final: 1試合
+   - training: 複数試合
+4. 決勝トーナメント（semifinal, third_place, final）が駒場スタジアムで開催されているか確認
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "data"
+    },
+    # ========== 新規追加: CRUD操作テスト ==========
+    {
+        "id": "T017",
+        "name": "試合結果更新API確認",
+        "prompt": """
+試合結果更新APIが正しく動作するか確認：
+
+1. 未完了の試合を1件取得
+2. スコアを設定してPATCHリクエスト
+3. 更新後のデータを再取得して確認
+4. statusがcompletedになっているか確認
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "crud"
+    },
+    {
+        "id": "T018",
+        "name": "チーム入れ替えAPI確認",
+        "prompt": """
+試合のチーム入れ替えAPIが正しく動作するか確認：
+
+1. /api/matches/swap-teams エンドポイントの存在確認
+2. APIドキュメント（/docs）でパラメータ確認
+3. 結果を報告
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "crud"
+    },
+    # ========== 新規追加: エラーハンドリングテスト ==========
+    {
+        "id": "T019",
+        "name": "不正リクエストのエラーハンドリング",
+        "prompt": """
+APIが不正なリクエストに対して適切なエラーを返すか確認：
+
+1. 存在しない会場ID: curl http://localhost:8000/api/venues/99999
+2. 存在しない試合ID: curl http://localhost:8000/api/matches/99999
+3. 不正なパラメータ: curl http://localhost:8000/api/venues/?tournament_id=invalid
+
+適切な404/400エラーが返るか確認し報告
+""",
+        "tools": ["Bash"],
+        "category": "error"
+    },
+    {
+        "id": "T020",
+        "name": "必須フィールドバリデーション",
+        "prompt": """
+必須フィールドが欠けた場合のバリデーションを確認：
+
+1. 会場作成で名前なし:
+   curl -X POST http://localhost:8000/api/venues/ -H "Content-Type: application/json" -d '{"tournament_id": 1}'
+
+2. 適切なバリデーションエラーが返るか確認
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "error"
+    },
+    # ========== 新規追加: 型安全性テスト ==========
+    {
+        "id": "T021",
+        "name": "TypeScript型定義の完全性",
+        "prompt": """
+TypeScriptの型定義が完全か確認：
+
+1. shared/types/index.ts を読む
+2. 以下の型が定義されているか確認：
+   - Venue (isFinalsVenue, forFinalDay含む)
+   - Match, MatchWithDetails
+   - Team
+   - Goal
+   - Tournament
+
+3. 各型に必要なフィールドが揃っているか確認
+
+問題があれば報告
+""",
+        "tools": ["Read"],
+        "category": "types"
+    },
+    {
+        "id": "T022",
+        "name": "未使用インポート・変数検出",
+        "prompt": """
+未使用のインポートや変数がないか確認：
+
+1. npm run build を実行
+2. TS6133 (unused variable) や TS6196 (unused import) のエラーがないか確認
+3. エラーがあれば詳細を報告
+
+対象: D:/UrawaCup/src/frontend/
+""",
+        "tools": ["Bash"],
+        "category": "types"
+    },
+    # ========== 新規追加: パフォーマンス・UXテスト ==========
+    {
+        "id": "T023",
+        "name": "N+1クエリ問題確認",
+        "prompt": """
+API呼び出しでN+1問題がないか確認：
+
+1. 試合一覧取得時に、各試合のチーム情報が含まれているか確認
+   curl http://localhost:8000/api/matches/?tournament_id=1
+
+2. レスポンスにhomeTeam, awayTeam, venue, goalsが展開されているか確認
+3. 追加のAPIリクエストなしで必要な情報が取得できるか確認
+
+問題があれば報告
+""",
+        "tools": ["Bash"],
+        "category": "performance"
+    },
+    {
+        "id": "T024",
+        "name": "ローディング状態の実装確認",
+        "prompt": """
+各画面でローディング状態が適切に表示されるか確認：
+
+1. 以下のファイルで isLoading / loading 状態が使われているか確認：
+   - MatchResult.tsx
+   - MatchSchedule.tsx
+   - FinalDaySchedule.tsx
+   - Settings.tsx
+
+2. ローディング中の表示（スピナー等）が実装されているか確認
+
+問題があれば報告
+""",
+        "tools": ["Grep", "Read"],
+        "category": "ux"
+    },
+    # ========== 新規追加: セキュリティテスト ==========
+    {
+        "id": "T025",
+        "name": "認証バイパス確認",
+        "prompt": """
+認証が必要なAPIに認証なしでアクセスできないか確認：
+
+1. 管理者用APIに認証なしでアクセス試行
+2. 適切に401/403が返るか確認
+
+※現在の実装で認証が実装されているかも含めて報告
+""",
+        "tools": ["Bash"],
+        "category": "security"
+    },
 ]
 
 
@@ -476,6 +727,14 @@ def main():
   build           - ビルド確認
   files           - ファイル存在確認
   dragdrop        - ドラッグ&ドロップ機能
+  ui-api          - UI-API整合性
+  data            - データ整合性
+  crud            - CRUD操作
+  error           - エラーハンドリング
+  types           - 型安全性
+  performance     - パフォーマンス
+  ux              - UX/ローディング
+  security        - セキュリティ
 
 使用例:
   python agent_check.py                    # 全テスト実行
