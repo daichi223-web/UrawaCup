@@ -22,6 +22,20 @@ class ReportRecipientCreate(ReportRecipientBase):
     tournament_id: int = Field(..., description="大会ID")
 
 
+class SenderSettingsUpdate(CamelCaseModel):
+    """報告書発信元設定更新リクエスト"""
+    sender_organization: Optional[str] = Field(None, max_length=100, description="発信元所属（例：県立浦和高校サッカー部）")
+    sender_name: Optional[str] = Field(None, max_length=100, description="発信元氏名（例：森川大地）")
+    sender_contact: Optional[str] = Field(None, max_length=100, description="発信元連絡先（例：090-XXXX-XXXX）")
+
+
+class SenderSettingsResponse(CamelCaseModel):
+    """報告書発信元設定レスポンス"""
+    sender_organization: Optional[str] = None
+    sender_name: Optional[str] = None
+    sender_contact: Optional[str] = None
+
+
 class ReportRecipientResponse(ReportRecipientBase):
     """報告書送信先レスポンス"""
     id: int

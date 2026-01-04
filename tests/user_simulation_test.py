@@ -7,7 +7,7 @@ import json
 import httpx
 from datetime import datetime, date
 
-API_URL = "http://localhost:8000/api"
+API_URL = "http://localhost:8100/api"
 
 class UserSimulationTest:
     def __init__(self):

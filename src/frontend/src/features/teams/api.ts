@@ -63,6 +63,21 @@ export const teamApi = {
     return response.data;
   },
 
+  // Excelインポート（2列フォーマット対応）
+  importExcel: async (teamId: number, file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await httpClient.post<any>(
+      `/players/import-excel/${teamId}`,
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }
+    );
+    return response.data;
+  },
+
   // CSVエクスポート
   exportCsv: async (tournamentId: number): Promise<Blob> => {
     const response = await httpClient.get('/teams/export-csv', {

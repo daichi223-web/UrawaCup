@@ -58,8 +58,8 @@ def load_investigation_reports() -> dict[str, str]:
         if filepath.name == "_SUMMARY.md":
             continue
         content = filepath.read_text(encoding="utf-8")
-        # イシューIDを抽出
-        match = re.search(r'\[([A-Z]\d+)\]', filepath.name)
+        # イシューIDを抽出（T003_... 形式に対応）
+        match = re.search(r'^([A-Z]\d+)_', filepath.name)
         if match:
             reports[match.group(1)] = content
 

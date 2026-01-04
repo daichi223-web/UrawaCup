@@ -8,7 +8,8 @@ export interface Venue {
   shortName: string;
   address: string | null;
   pitchCount: number; // コート数
-  hostTeamId: number | null; // 会場担当チーム
+  hostTeamId: number | null; // 会場担当チーム（旧フィールド）
+  managerTeamId: number | null; // 会場責任チームID
   groupId: string | null;
   forFinalDay: boolean; // 最終日の順位リーグ会場
   isFinalsVenue: boolean; // 決勝トーナメント会場
@@ -21,9 +22,11 @@ export interface Venue {
   is_finals_venue?: boolean;
   max_matches_per_day?: number;
   maxMatchesPerDay?: number;
+  manager_team_id?: number | null;
 
   // 結合データ
   hostTeam?: { id: number; name: string };
+  managerTeam?: { id: number; name: string; shortName?: string };
 }
 
 export interface CreateVenueInput {
@@ -45,6 +48,7 @@ export interface UpdateVenueInput {
   address?: string;
   pitchCount?: number;
   hostTeamId?: number;
+  managerTeamId?: number | null;
   groupId?: string;
   group_id?: string;
   max_matches_per_day?: number;

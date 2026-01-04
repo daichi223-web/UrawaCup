@@ -1,8 +1,8 @@
 {
-  "test_date": "2026-01-01T17:12:36.539674",
+  "test_date": "2026-01-04T19:23:03.420004",
   "summary": {
-    "successes": 16,
-    "issues": 0
+    "successes": 12,
+    "issues": 2
   },
   "successes": [
     {
@@ -11,35 +11,19 @@
     },
     {
       "scenario": "ダッシュボード",
-      "message": "トーナメント 1件 表示"
+      "message": "トーナメント 2件 表示"
     },
     {
       "scenario": "トーナメント詳細",
-      "message": "startDate=2026-03-21 パース成功"
+      "message": "startDate=2027-03-20 パース成功"
     },
     {
       "scenario": "チーム一覧",
-      "message": "25チーム表示"
+      "message": "24チーム表示"
     },
     {
       "scenario": "チーム作成",
       "message": "新規チーム作成成功"
-    },
-    {
-      "scenario": "チーム削除",
-      "message": "テストチーム削除成功"
-    },
-    {
-      "scenario": "試合スケジュール",
-      "message": "48試合表示"
-    },
-    {
-      "scenario": "試合スケジュール",
-      "message": "チーム名表示OK: 浦和レッズユース vs 前橋育英高校"
-    },
-    {
-      "scenario": "試合結果入力",
-      "message": "Match #1 スコア更新成功"
     },
     {
       "scenario": "順位表",
@@ -70,5 +54,18 @@
       "message": "エンドポイント未実装or データなし"
     }
   ],
-  "issues": []
+  "issues": [
+    {
+      "scenario": "試合スケジュール",
+      "message": "取得失敗 (Status: 500)",
+      "details": null,
+      "timestamp": "2026-01-04T19:22:56.410972"
+    },
+    {
+      "scenario": "試合結果入力",
+      "message": "試合取得失敗",
+      "details": null,
+      "timestamp": "2026-01-04T19:22:58.559365"
+    }
+  ]
 }

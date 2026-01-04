@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { reportApi } from '@/features/reports';
+import { useSenderSettings, useUpdateSenderSettings } from '@/features/reports/hooks';
 import { httpClient } from '@/core/http';
-import { FileText, Download, Trophy, Calendar, Table, Eye, X, Clock } from 'lucide-react'
+import { FileText, Download, Trophy, Calendar, Table, Eye, X, Clock, Edit2, Save } from 'lucide-react'
 import toast from 'react-hot-toast';
 
 interface MatchPreview {
@@ -34,8 +35,45 @@ function Reports() {
   const [previewData, setPreviewData] = useState<ReportPreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // 発信元設定
+  const [isEditingSender, setIsEditingSender] = useState(false);
+  const [senderForm, setSenderForm] = useState({
+    senderOrganization: '',
+    senderName: '',
+    senderContact: '',
+  });
+
   // TODO: Context
   const tournamentId = 1;
+
+  // 発信元設定の取得
+  const { data: senderSettings, isLoading: senderLoading } = useSenderSettings(tournamentId);
+  const updateSenderSettings = useUpdateSenderSettings();
+
+  // 発信元設定をフォームに反映
+  useEffect(() => {
+    if (senderSettings) {
+      setSenderForm({
+        senderOrganization: senderSettings.senderOrganization || '',
+        senderName: senderSettings.senderName || '',
+        senderContact: senderSettings.senderContact || '',
+      });
+    }
+  }, [senderSettings]);
+
+  // 発信元設定の保存
+  const handleSaveSenderSettings = async () => {
+    try {
+      await updateSenderSettings.mutateAsync({
+        tournamentId,
+        data: senderForm,
+      });
+      setIsEditingSender(false);
+      toast.success('発信元設定を保存しました');
+    } catch (err) {
+      toast.error('保存に失敗しました');
+    }
+  };
 
   // 日付のマッピング（実際の大会日程に合わせて設定）
   const dateMap: Record<string, string> = {
@@ -413,11 +451,106 @@ function Reports() {
         </div>
       </div>
 
-      {/* 送信先設定（モックのまま） */}
-      <div className="card opacity-60 pointer-events-none">
+      {/* 発信元設定 */}
+      <div className="card">
         <div className="card-header flex items-center justify-between">
-          <h3 className="text-lg font-semibold">送信先 (自動送信予定)</h3>
-          <span className="text-xs bg-gray-200 px-2 py-1 rounded">Coming Soon</span>
+          <h3 className="text-lg font-semibold">報告書発信元設定</h3>
+          {!isEditingSender ? (
+            <button
+              onClick={() => setIsEditingSender(true)}
+              className="btn btn-secondary btn-sm flex items-center gap-1"
+            >
+              <Edit2 className="w-4 h-4" />
+              編集
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setIsEditingSender(false);
+                  if (senderSettings) {
+                    setSenderForm({
+                      senderOrganization: senderSettings.senderOrganization || '',
+                      senderName: senderSettings.senderName || '',
+                      senderContact: senderSettings.senderContact || '',
+                    });
+                  }
+                }}
+                className="btn btn-secondary btn-sm"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSaveSenderSettings}
+                disabled={updateSenderSettings.isPending}
+                className="btn btn-primary btn-sm flex items-center gap-1"
+              >
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="card-body">
+          {senderLoading ? (
+            <div className="text-center py-4 text-gray-500">読込中...</div>
+          ) : isEditingSender ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="form-label">発信元所属</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="例: 県立浦和高校サッカー部"
+                  value={senderForm.senderOrganization}
+                  onChange={(e) => setSenderForm({ ...senderForm, senderOrganization: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="form-label">発信元氏名</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="例: 森川大地"
+                  value={senderForm.senderName}
+                  onChange={(e) => setSenderForm({ ...senderForm, senderName: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="form-label">連絡先</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="例: 090-XXXX-XXXX"
+                  value={senderForm.senderContact}
+                  onChange={(e) => setSenderForm({ ...senderForm, senderContact: e.target.value })}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">発信元所属:</span>
+                <p className="font-medium">{senderSettings?.senderOrganization || '未設定'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">発信元氏名:</span>
+                <p className="font-medium">{senderSettings?.senderName || '未設定'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">連絡先:</span>
+                <p className="font-medium">{senderSettings?.senderContact || '未設定'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 送信先設定（将来実装） */}
+      <div className="card opacity-60">
+        <div className="card-header flex items-center justify-between">
+          <h3 className="text-lg font-semibold">送信先一覧</h3>
+          <span className="text-xs bg-gray-200 px-2 py-1 rounded">自動送信は将来実装予定</span>
         </div>
         <div className="card-body">
           <ul className="space-y-2 text-sm">

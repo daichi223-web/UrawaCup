@@ -23,6 +23,8 @@ from schemas.report import (
     MatchReport,
     GoalReport,
     ReportData,
+    SenderSettingsUpdate,
+    SenderSettingsResponse,
 )
 
 router = APIRouter()
@@ -124,6 +126,61 @@ def setup_default_recipients(
         db.refresh(r)
 
     return created
+
+
+# ================== 報告書発信元設定 ==================
+
+@router.get("/sender-settings/{tournament_id}")
+def get_sender_settings(
+    tournament_id: int,
+    db: Session = Depends(get_db),
+):
+    """報告書発信元設定を取得"""
+    from schemas.report import SenderSettingsResponse
+
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"大会が見つかりません (ID: {tournament_id})"
+        )
+
+    return SenderSettingsResponse(
+        sender_organization=tournament.sender_organization,
+        sender_name=tournament.sender_name,
+        sender_contact=tournament.sender_contact,
+    )
+
+
+@router.patch("/sender-settings/{tournament_id}", response_model=SenderSettingsResponse)
+def update_sender_settings(
+    tournament_id: int,
+    settings: SenderSettingsUpdate,
+    db: Session = Depends(get_db),
+):
+    """報告書発信元設定を更新"""
+
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"大会が見つかりません (ID: {tournament_id})"
+        )
+
+    # 値が指定されたフィールドのみ更新
+    update_data = settings.model_dump(by_alias=False, exclude_unset=True)
+    for field, value in update_data.items():
+        if hasattr(tournament, field):
+            setattr(tournament, field, value)
+
+    db.commit()
+    db.refresh(tournament)
+
+    return SenderSettingsResponse(
+        sender_organization=tournament.sender_organization,
+        sender_name=tournament.sender_name,
+        sender_contact=tournament.sender_contact,
+    )
 
 
 # ================== 報告書データ取得 ==================

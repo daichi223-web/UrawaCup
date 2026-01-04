@@ -1,7 +1,7 @@
 // src/features/reports/api.ts
 // 報告書API呼び出し
 import { httpClient } from '@/core/http';
-import type { ReportGenerateInput, ReportJob, ReportRecipient } from './types';
+import type { ReportGenerateInput, ReportJob, ReportRecipient, SenderSettings, SenderSettingsUpdate } from './types';
 
 export const reportApi = {
   // 報告書生成開始
@@ -144,6 +144,20 @@ export const reportApi = {
       },
       responseType: 'blob',
     });
+    return response.data;
+  },
+
+  // ===== 発信元設定 =====
+
+  // 発信元設定取得
+  getSenderSettings: async (tournamentId: number): Promise<SenderSettings> => {
+    const response = await httpClient.get<SenderSettings>(`/reports/sender-settings/${tournamentId}`);
+    return response.data;
+  },
+
+  // 発信元設定更新
+  updateSenderSettings: async (tournamentId: number, data: SenderSettingsUpdate): Promise<SenderSettings> => {
+    const response = await httpClient.patch<SenderSettings>(`/reports/sender-settings/${tournamentId}`, data);
     return response.data;
   },
 };

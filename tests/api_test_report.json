@@ -1,75 +1,68 @@
 {
-  "test_date": "2026-01-02T17:32:01.847666",
+  "test_date": "2026-01-04T19:09:52.481698",
   "summary": {
-    "success": 0,
-    "errors": 9,
-    "warnings": 0
+    "success": 2,
+    "errors": 2,
+    "warnings": 5
   },
-  "successes": [],
-  "errors": [
+  "successes": [
     {
       "endpoint": "/health",
-      "type": "Connection Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
-      "details": null,
-      "timestamp": "2026-01-02T17:31:08.720034"
-    },
-    {
-      "endpoint": "/auth/login",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
-      "details": null,
-      "timestamp": "2026-01-02T17:31:12.813011"
-    },
-    {
-      "endpoint": "/tournaments",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
-      "details": null,
-      "timestamp": "2026-01-02T17:31:16.891451"
+      "message": "サーバー稼働中",
+      "timestamp": "2026-01-04T19:09:51.428894"
     },
     {
       "endpoint": "/tournaments/1",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "message": "startDate=2027-03-20 (camelCase OK)",
+      "timestamp": "2026-01-04T19:09:52.101402"
+    }
+  ],
+  "errors": [
+    {
+      "endpoint": "/tournaments",
+      "type": "HTTP Error",
+      "message": "Status: 307",
       "details": null,
-      "timestamp": "2026-01-02T17:31:20.975376"
+      "timestamp": "2026-01-04T19:09:52.034303"
     },
     {
       "endpoint": "/teams",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "type": "HTTP Error",
+      "message": "Status: 307",
       "details": null,
-      "timestamp": "2026-01-02T17:31:25.075443"
+      "timestamp": "2026-01-04T19:09:52.113976"
+    }
+  ],
+  "warnings": [
+    {
+      "endpoint": "/auth/login",
+      "message": "ログイン失敗 (Status: 401) - 管理者未作成の可能性",
+      "details": null,
+      "timestamp": "2026-01-04T19:09:52.018408"
     },
     {
       "endpoint": "/venues",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "message": "Status: 307",
       "details": null,
-      "timestamp": "2026-01-02T17:31:29.160647"
+      "timestamp": "2026-01-04T19:09:52.157618"
     },
     {
       "endpoint": "/matches",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "message": "Status: 307",
       "details": null,
-      "timestamp": "2026-01-02T17:31:33.237011"
+      "timestamp": "2026-01-04T19:09:52.192411"
     },
     {
       "endpoint": "/standings/1",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "message": "順位データが存在しない",
       "details": null,
-      "timestamp": "2026-01-02T17:31:37.319260"
+      "timestamp": "2026-01-04T19:09:52.391137"
     },
     {
       "endpoint": "/standings/1/top-scorers",
-      "type": "Request Error",
-      "message": "[WinError 10061] 対象のコンピューターによって拒否されたため、接続できませんでした。",
+      "message": "データなし",
       "details": null,
-      "timestamp": "2026-01-02T17:31:41.408909"
+      "timestamp": "2026-01-04T19:09:52.400584"
     }
-  ],
-  "warnings": []
+  ]
 }

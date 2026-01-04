@@ -1,16 +1,27 @@
 // src/features/final-day/components/MatchRow.tsx
 // 試合行コンポーネント
 
+import { AlertTriangle } from 'lucide-react';
 import type { FinalMatch } from '../types';
 import { DraggableTeamSlot } from './DraggableTeamSlot';
+
+interface RematchInfo {
+  groupId?: string;
+  matchDate?: string;
+  score?: string;
+}
 
 interface MatchRowProps {
   match: FinalMatch;
   onMatchClick?: (match: FinalMatch) => void;
   showLabel?: boolean;
+  /** 再戦（予選で対戦済み）かどうか */
+  isRematch?: boolean;
+  /** 再戦情報（予選での対戦詳細） */
+  rematchInfo?: RematchInfo;
 }
 
-export function MatchRow({ match, onMatchClick, showLabel = false }: MatchRowProps) {
+export function MatchRow({ match, onMatchClick, showLabel = false, isRematch = false, rematchInfo }: MatchRowProps) {
   const isCompleted = match.status === 'completed';
 
   const handleRowClick = () => {
@@ -18,6 +29,13 @@ export function MatchRow({ match, onMatchClick, showLabel = false }: MatchRowPro
       onMatchClick(match);
     }
   };
+
+  // 再戦時のスタイル
+  const rowClassName = `border-b cursor-pointer transition-colors duration-150 ${
+    isRematch
+      ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100'
+      : 'hover:bg-blue-50'
+  }`;
 
   // 試合種別のラベル
   const getMatchLabel = () => {
@@ -37,7 +55,7 @@ export function MatchRow({ match, onMatchClick, showLabel = false }: MatchRowPro
 
   return (
     <tr
-      className="border-b hover:bg-blue-50 cursor-pointer transition-colors duration-150"
+      className={rowClassName}
       onClick={handleRowClick}
     >
       {/* 試合番号 */}
@@ -67,20 +85,32 @@ export function MatchRow({ match, onMatchClick, showLabel = false }: MatchRowPro
 
       {/* 対戦カード */}
       <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-center gap-2">
-          <DraggableTeamSlot
-            matchId={match.id}
-            side="home"
-            team={match.homeTeam}
-            disabled={isCompleted}
-          />
-          <span className="text-gray-400 text-sm">-</span>
-          <DraggableTeamSlot
-            matchId={match.id}
-            side="away"
-            team={match.awayTeam}
-            disabled={isCompleted}
-          />
+        <div className="flex flex-col">
+          <div className="flex items-center justify-center gap-2">
+            <DraggableTeamSlot
+              matchId={match.id}
+              side="home"
+              team={match.homeTeam}
+              disabled={isCompleted}
+            />
+            <span className="text-gray-400 text-sm">-</span>
+            <DraggableTeamSlot
+              matchId={match.id}
+              side="away"
+              team={match.awayTeam}
+              disabled={isCompleted}
+            />
+          </div>
+          {/* 再戦警告 */}
+          {isRematch && (
+            <div className="flex items-center justify-center gap-1 mt-1 text-xs text-orange-600">
+              <AlertTriangle className="w-3 h-3" />
+              <span>
+                予選{rematchInfo?.groupId ? `${rematchInfo.groupId}組` : ''}で対戦済み
+                {rematchInfo?.score && ` (${rematchInfo.score})`}
+              </span>
+            </div>
+          )}
         </div>
       </td>
 

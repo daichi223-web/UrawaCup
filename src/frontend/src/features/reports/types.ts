@@ -30,3 +30,15 @@ export interface ReportRecipient {
   fax?: string;
   isActive: boolean;
 }
+
+export interface SenderSettings {
+  senderOrganization: string | null;
+  senderName: string | null;
+  senderContact: string | null;
+}
+
+export interface SenderSettingsUpdate {
+  senderOrganization?: string;
+  senderName?: string;
+  senderContact?: string;
+}

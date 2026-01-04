@@ -115,6 +115,11 @@ class Match(Base, TimestampMixin):
     home_seed = Column(String(10), nullable=True, comment="ホームチームシード（例：A1位）")
     away_seed = Column(String(10), nullable=True, comment="アウェイチームシード（例：C1位）")
 
+    # 運営担当（Final Day用）
+    referee_main = Column(String(100), nullable=True, comment="主審")
+    referee_assistant = Column(String(100), nullable=True, comment="副審")
+    venue_manager = Column(String(100), nullable=True, comment="会場運営担当")
+
     # 複合外部キー制約: (tournament_id, group_id) -> groups(tournament_id, id)
     __table_args__ = (
         ForeignKeyConstraint(

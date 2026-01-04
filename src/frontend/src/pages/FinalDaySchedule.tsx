@@ -40,6 +40,7 @@ import type {
   VenueSchedule,
 } from '@/features/final-day/types';
 import { useTeams } from '@/features/teams/hooks';
+import { useVenuesByTournament, useUpdateVenue } from '@/features/venues/hooks';
 import { useAppStore } from '@/stores/appStore';
 
 export default function FinalDaySchedule() {
@@ -52,6 +53,7 @@ export default function FinalDaySchedule() {
   // データ取得
   const { data: allMatches, isLoading, refetch } = useFinalDayMatches(tournamentId, finalDayDate);
   const { data: teams = [] } = useTeams(tournamentId);
+  const { data: venues = [] } = useVenuesByTournament(tournamentId);
 
   // ミューテーション
   const generateFinals = useGenerateFinals(tournamentId);
@@ -59,6 +61,7 @@ export default function FinalDaySchedule() {
   const updateMatchTeams = useUpdateMatchTeams(tournamentId);
   const swapTeams = useSwapTeams(tournamentId);
   const updateFinalsBracket = useUpdateFinalsBracket(tournamentId);
+  const updateVenue = useUpdateVenue();
 
   // ローカルステート
   const [activeItem, setActiveItem] = useState<DragItem | null>(null);
@@ -108,9 +111,18 @@ export default function FinalDaySchedule() {
       if (match.matchType === 'training') {
         const venueId = match.venue.id;
         if (!trainingMap.has(venueId)) {
+          // venues dataから会場担当情報を取得
+          const venueData = venues.find(v => v.id === venueId);
+          // managerTeamId または snake_case の manager_team_id を使用
+          const managerId = venueData?.managerTeamId ?? venueData?.manager_team_id;
+          const managerTeam = managerId
+            ? teams.find(t => t.id === managerId)
+            : null;
+
           trainingMap.set(venueId, {
             id: venueId,
             name: match.venue.name,
+            manager: managerTeam?.shortName || managerTeam?.name,
             matches: [],
           });
         }
@@ -133,7 +145,7 @@ export default function FinalDaySchedule() {
       knockoutMatches: knockout,
       knockoutVenueName: koVenue,
     };
-  }, [allMatches]);
+  }, [allMatches, venues, teams]);
 
   // ドラッグ開始
   const handleDragStart = (event: DragStartEvent) => {
@@ -292,6 +304,20 @@ export default function FinalDaySchedule() {
     }
   };
 
+  // 会場担当変更
+  const handleManagerChange = async (venueId: number, teamId: number | null) => {
+    try {
+      await updateVenue.mutateAsync({
+        id: venueId,
+        managerTeamId: teamId,
+      });
+      toast.success('会場担当を変更しました');
+    } catch (error) {
+      console.error('Failed to update venue manager:', error);
+      toast.error('会場担当の変更に失敗しました');
+    }
+  };
+
   // 日付フォーマット
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -362,7 +388,9 @@ export default function FinalDaySchedule() {
                 <VenueCard
                   key={venue.id}
                   venue={venue}
+                  teams={teams}
                   onMatchClick={setEditingMatch}
+                  onManagerChange={handleManagerChange}
                 />
               ))}
             </div>

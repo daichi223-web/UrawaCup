@@ -2,7 +2,7 @@
 // 報告書 React Query hooks
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reportApi } from './api';
-import type { ReportGenerateInput, ReportRecipient } from './types';
+import type { ReportGenerateInput, ReportRecipient, SenderSettingsUpdate } from './types';
 
 const QUERY_KEY = ['reports'];
 
@@ -85,6 +85,30 @@ export function useDeleteReportRecipient() {
     mutationFn: (id: number) => reportApi.deleteRecipient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEY, 'recipients'] });
+    },
+  });
+}
+
+// ===== 発信元設定 =====
+
+export function useSenderSettings(tournamentId: number) {
+  return useQuery({
+    queryKey: [...QUERY_KEY, 'sender-settings', tournamentId],
+    queryFn: () => reportApi.getSenderSettings(tournamentId),
+    enabled: tournamentId > 0,
+  });
+}
+
+export function useUpdateSenderSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ tournamentId, data }: { tournamentId: number; data: SenderSettingsUpdate }) =>
+      reportApi.updateSenderSettings(tournamentId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEY, 'sender-settings', variables.tournamentId],
+      });
     },
   });
 }
