@@ -107,12 +107,12 @@ export default defineConfig({
     proxy: {
       // バックエンドAPIへのプロキシ設定
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8100',
         changeOrigin: true,
       },
       // WebSocketプロキシ設定
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'ws://localhost:8100',
         ws: true,
         changeOrigin: true,
       },

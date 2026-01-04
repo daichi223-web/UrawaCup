@@ -11,6 +11,10 @@ interface KnockoutCardProps {
   onMatchClick?: (match: FinalMatch) => void;
   onUpdateBracket?: () => void;
   isUpdating?: boolean;
+  /** クリック入れ替えモード用: 選択中のチーム情報 */
+  selectedSlot?: { matchId: number; side: 'home' | 'away' } | null;
+  /** クリック入れ替えモード用: チームスロットクリック時のコールバック */
+  onSlotClick?: (matchId: number, side: 'home' | 'away') => void;
 }
 
 export function KnockoutCard({
@@ -19,6 +23,8 @@ export function KnockoutCard({
   onMatchClick,
   onUpdateBracket,
   isUpdating,
+  selectedSlot,
+  onSlotClick,
 }: KnockoutCardProps) {
   // 試合を種別でソート
   const sortedMatches = [...matches].sort((a, b) => {
@@ -73,6 +79,8 @@ export function KnockoutCard({
                   match={match}
                   onMatchClick={onMatchClick}
                   showLabel={true}
+                  selectedSlot={selectedSlot}
+                  onSlotClick={onSlotClick}
                 />
               ))
             ) : (

@@ -69,6 +69,29 @@ export interface VenueSchedule {
   manager?: string;
   /** 試合一覧 */
   matches: FinalMatch[];
+  /** リーグ番号（順位リーグの場合） */
+  leagueNumber?: number;
+  /** 順位範囲（例: "5〜9位"） */
+  rankRange?: string;
+}
+
+/** 試合notesからリーグ情報を抽出 */
+export function parseLeagueInfo(notes?: string): { leagueNumber?: number; rankRange?: string; isRematch: boolean } {
+  if (!notes) return { isRematch: false };
+
+  const isRematch = notes.includes('⚠️再戦');
+
+  // "順位リーグ1（5〜9位）" のパターンにマッチ
+  const leagueMatch = notes.match(/順位リーグ(\d+)（([^）]+)）/);
+  if (leagueMatch) {
+    return {
+      leagueNumber: parseInt(leagueMatch[1]),
+      rankRange: leagueMatch[2],
+      isRematch,
+    };
+  }
+
+  return { isRematch };
 }
 
 /** 最終日スケジュール全体 */

@@ -1,9 +1,10 @@
 // src/features/final-day/components/VenueCard.tsx
 // 会場カードコンポーネント
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { VenueSchedule, FinalMatch } from '../types';
+import { parseLeagueInfo } from '../types';
 import type { Team } from '@shared/types';
 import { MatchRow } from './MatchRow';
 
@@ -12,9 +13,13 @@ interface VenueCardProps {
   teams?: Team[];
   onMatchClick?: (match: FinalMatch) => void;
   onManagerChange?: (venueId: number, teamId: number | null) => void;
+  /** クリック入れ替えモード用: 選択中のチーム情報 */
+  selectedSlot?: { matchId: number; side: 'home' | 'away' } | null;
+  /** クリック入れ替えモード用: チームスロットクリック時のコールバック */
+  onSlotClick?: (matchId: number, side: 'home' | 'away') => void;
 }
 
-export function VenueCard({ venue, teams, onMatchClick, onManagerChange }: VenueCardProps) {
+export function VenueCard({ venue, teams, onMatchClick, onManagerChange, selectedSlot, onSlotClick }: VenueCardProps) {
   const [isEditingManager, setIsEditingManager] = useState(false);
 
   // 会場に所属するチームをフィルタ（同じグループのチームなど）
@@ -29,11 +34,41 @@ export function VenueCard({ venue, teams, onMatchClick, onManagerChange }: Venue
   // 現在のマネージャーチームを取得
   const currentManagerTeam = availableTeams.find(t => t.name === venue.manager);
 
+  // 最初の試合のnotesからリーグ情報を抽出
+  const leagueInfo = useMemo(() => {
+    const firstMatch = venue.matches[0];
+    if (!firstMatch) return null;
+    const info = parseLeagueInfo(firstMatch.notes);
+    if (info.leagueNumber !== undefined) {
+      return { leagueNumber: info.leagueNumber, rankRange: info.rankRange };
+    }
+    // VenueScheduleに直接設定されている場合
+    if (venue.leagueNumber !== undefined) {
+      return { leagueNumber: venue.leagueNumber, rankRange: venue.rankRange };
+    }
+    return null;
+  }, [venue]);
+
+  // 各試合の再戦情報をメモ化
+  const rematchMap = useMemo(() => {
+    const map = new Map<number, boolean>();
+    venue.matches.forEach(match => {
+      const info = parseLeagueInfo(match.notes);
+      map.set(match.id, info.isRematch);
+    });
+    return map;
+  }, [venue.matches]);
+
   return (
     <div className="border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
       {/* 会場名ヘッダー */}
       <div className="bg-gray-100 px-3 py-2 font-semibold text-center border-b text-sm">
-        {venue.name}
+        <div>{venue.name}</div>
+        {leagueInfo && (
+          <div className="text-xs font-normal text-gray-600 mt-0.5">
+            リーグ{leagueInfo.leagueNumber}（{leagueInfo.rankRange}）
+          </div>
+        )}
       </div>
 
       {/* 試合テーブル */}
@@ -54,6 +89,9 @@ export function VenueCard({ venue, teams, onMatchClick, onManagerChange }: Venue
                   key={match.id}
                   match={match}
                   onMatchClick={onMatchClick}
+                  isRematch={rematchMap.get(match.id) ?? false}
+                  selectedSlot={selectedSlot}
+                  onSlotClick={onSlotClick}
                 />
               ))
             ) : (

@@ -129,15 +129,19 @@ def setup_default_recipients(
 
 
 # ================== 報告書発信元設定 ==================
+# 要件準拠パス: GET/PUT /tournaments/{id}/report-settings
 
-@router.get("/sender-settings/{tournament_id}")
+@router.get("/tournaments/{tournament_id}/report-settings", response_model=SenderSettingsResponse)
+@router.get("/sender-settings/{tournament_id}", response_model=SenderSettingsResponse, include_in_schema=False)
 def get_sender_settings(
     tournament_id: int,
     db: Session = Depends(get_db),
 ):
-    """報告書発信元設定を取得"""
-    from schemas.report import SenderSettingsResponse
+    """
+    報告書発信元設定を取得
 
+    要件準拠パス: GET /tournaments/{id}/report-settings
+    """
     tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
     if not tournament:
         raise HTTPException(
@@ -152,14 +156,18 @@ def get_sender_settings(
     )
 
 
-@router.patch("/sender-settings/{tournament_id}", response_model=SenderSettingsResponse)
+@router.put("/tournaments/{tournament_id}/report-settings", response_model=SenderSettingsResponse)
+@router.patch("/sender-settings/{tournament_id}", response_model=SenderSettingsResponse, include_in_schema=False)
 def update_sender_settings(
     tournament_id: int,
     settings: SenderSettingsUpdate,
     db: Session = Depends(get_db),
 ):
-    """報告書発信元設定を更新"""
+    """
+    報告書発信元設定を更新
 
+    要件準拠パス: PUT /tournaments/{id}/report-settings
+    """
     tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
     if not tournament:
         raise HTTPException(
@@ -321,8 +329,97 @@ def get_match_reports(
 
 
 # ================== PDF/Excel出力 ==================
+# 要件準拠パス: POST /tournaments/{id}/reports/daily, POST /tournaments/{id}/reports/final
 
-@router.get("/export/pdf")
+from pydantic import BaseModel
+
+class DailyReportRequest(BaseModel):
+    """日別報告書リクエスト"""
+    date: date
+    venue_ids: Optional[List[int]] = None
+
+
+@router.post("/tournaments/{tournament_id}/daily")
+def generate_daily_report_pdf(
+    tournament_id: int,
+    request: DailyReportRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    日別試合結果報告書をPDFで出力
+
+    要件準拠パス: POST /tournaments/{id}/reports/daily
+
+    Request Body:
+        date: 対象日
+        venue_ids: 会場IDリスト（省略時は全会場）
+    """
+    from services.report_service import ReportService
+
+    report_service = ReportService(db)
+    venue_id = request.venue_ids[0] if request.venue_ids and len(request.venue_ids) == 1 else None
+
+    try:
+        pdf_buffer = report_service.generate_pdf(tournament_id, request.date, venue_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDF生成に失敗しました: {str(e)}"
+        )
+
+    filename = f"浦和カップ_試合結果_{request.date.isoformat()}.pdf"
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}"
+        }
+    )
+
+
+@router.post("/tournaments/{tournament_id}/final")
+def generate_final_report_pdf(
+    tournament_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    最終結果報告書をPDFで出力
+
+    要件準拠パス: POST /tournaments/{id}/reports/final
+    """
+    from services.reports import FinalResultReportGenerator
+
+    try:
+        generator = FinalResultReportGenerator(
+            db=db,
+            tournament_id=tournament_id,
+        )
+        pdf_buffer = generator.generate()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"最終結果報告書の生成に失敗しました: {str(e)}"
+        )
+
+    filename = f"浦和カップ_最終結果.pdf"
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{filename}"
+        }
+    )
+
+
+# レガシーAPI（後方互換性のため維持）
+@router.get("/export/pdf", include_in_schema=False)
 def export_report_pdf(
     tournament_id: int = Query(..., description="大会ID"),
     target_date: date = Query(..., description="対象日"),
@@ -330,7 +427,7 @@ def export_report_pdf(
     db: Session = Depends(get_db),
 ):
     """
-    報告書をPDFで出力
+    報告書をPDFで出力（レガシー）
 
     指定日・指定会場の試合結果をPDF形式で出力
     """
@@ -440,15 +537,16 @@ def export_final_day_schedule_pdf(
     )
 
 
-@router.get("/export/final-result")
+@router.get("/export/final-result", include_in_schema=False)
 def export_final_result_pdf(
     tournament_id: int = Query(..., description="大会ID"),
     db: Session = Depends(get_db),
 ):
     """
-    最終結果報告書をPDFで出力
+    最終結果報告書をPDFで出力（レガシー）
 
     決勝トーナメントの結果、最終順位、優秀選手を含む
+    新しいAPI: POST /tournaments/{id}/final
     """
     from services.reports import FinalResultReportGenerator
 
@@ -612,6 +710,258 @@ def export_group_standings_pdf(
             "Content-Disposition": f"attachment; filename={filename}"
         }
     )
+
+
+# ================== プレビュー機能 ==================
+
+@router.get("/preview/pdf")
+def preview_report_pdf(
+    tournament_id: int = Query(..., description="大会ID"),
+    target_date: date = Query(..., description="対象日"),
+    venue_id: Optional[int] = Query(None, description="会場ID"),
+    db: Session = Depends(get_db),
+):
+    """
+    報告書PDFのプレビュー（Base64）
+
+    PDFをBase64エンコードして返す。フロントエンドでiframeに表示可能。
+    """
+    import base64
+    from services.report_service import ReportService
+
+    report_service = ReportService(db)
+
+    try:
+        pdf_buffer = report_service.generate_pdf(tournament_id, target_date, venue_id)
+        pdf_bytes = pdf_buffer.read()
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"PDFプレビュー生成に失敗しました: {str(e)}"
+        )
+
+    return {
+        "content": pdf_base64,
+        "content_type": "application/pdf",
+        "filename": f"preview_{target_date.isoformat()}.pdf",
+    }
+
+
+@router.get("/preview/final-result")
+def preview_final_result_pdf(
+    tournament_id: int = Query(..., description="大会ID"),
+    db: Session = Depends(get_db),
+):
+    """
+    最終結果報告書PDFのプレビュー（Base64）
+    """
+    import base64
+    from services.reports import FinalResultReportGenerator
+
+    try:
+        generator = FinalResultReportGenerator(
+            db=db,
+            tournament_id=tournament_id,
+        )
+        pdf_buffer = generator.generate()
+        pdf_bytes = pdf_buffer.read()
+        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"最終結果PDFプレビュー生成に失敗しました: {str(e)}"
+        )
+
+    return {
+        "content": pdf_base64,
+        "content_type": "application/pdf",
+        "filename": f"preview_final_result_{tournament_id}.pdf",
+    }
+
+
+# ================== 未入力警告チェック ==================
+
+@router.get("/check-incomplete")
+def check_incomplete_data(
+    tournament_id: int = Query(..., description="大会ID"),
+    target_date: Optional[date] = Query(None, description="対象日（省略時は最終結果チェック）"),
+    db: Session = Depends(get_db),
+):
+    """
+    未入力データをチェック
+
+    報告書出力前に不足しているデータを警告として返す。
+
+    Returns:
+        warnings: 未入力項目のリスト
+        can_export: 出力可能かどうか（致命的な未入力がなければTrue）
+    """
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"大会が見つかりません (ID: {tournament_id})"
+        )
+
+    warnings = []
+    critical_warnings = []
+
+    if target_date:
+        # 日別報告書のチェック
+        warnings, critical_warnings = _check_daily_report_data(db, tournament_id, target_date)
+    else:
+        # 最終結果報告書のチェック
+        warnings, critical_warnings = _check_final_result_data(db, tournament_id)
+
+    return {
+        "warnings": warnings,
+        "critical_warnings": critical_warnings,
+        "can_export": len(critical_warnings) == 0,
+        "warning_count": len(warnings),
+        "critical_count": len(critical_warnings),
+    }
+
+
+def _check_daily_report_data(db: Session, tournament_id: int, target_date: date):
+    """日別報告書の未入力チェック"""
+    warnings = []
+    critical_warnings = []
+
+    # 指定日の試合を取得
+    matches = db.query(Match).filter(
+        Match.tournament_id == tournament_id,
+        Match.match_date == target_date,
+        Match.stage != MatchStage.TRAINING,
+    ).all()
+
+    if not matches:
+        critical_warnings.append({
+            "type": "no_matches",
+            "message": f"{target_date}の試合データがありません",
+            "field": "matches",
+        })
+        return warnings, critical_warnings
+
+    # 各試合のチェック
+    for match in matches:
+        match_label = f"第{match.match_order}試合"
+        if match.venue:
+            match_label = f"{match.venue.name} {match_label}"
+
+        # 試合結果が未入力
+        if match.status != MatchStatus.COMPLETED:
+            critical_warnings.append({
+                "type": "incomplete_match",
+                "message": f"{match_label}の結果が未入力です",
+                "field": "match_result",
+                "match_id": match.id,
+            })
+        else:
+            # スコアチェック
+            if match.home_score_half1 is None or match.home_score_half2 is None:
+                warnings.append({
+                    "type": "missing_score",
+                    "message": f"{match_label}のホームスコアが不完全です",
+                    "field": "home_score",
+                    "match_id": match.id,
+                })
+            if match.away_score_half1 is None or match.away_score_half2 is None:
+                warnings.append({
+                    "type": "missing_score",
+                    "message": f"{match_label}のアウェイスコアが不完全です",
+                    "field": "away_score",
+                    "match_id": match.id,
+                })
+
+            # 得点経過チェック（得点があるのにGoalレコードがない場合）
+            total_score = (match.home_score_half1 or 0) + (match.home_score_half2 or 0) + \
+                          (match.away_score_half1 or 0) + (match.away_score_half2 or 0)
+            goal_count = len(match.goals) if hasattr(match, 'goals') else 0
+            if total_score > 0 and goal_count == 0:
+                warnings.append({
+                    "type": "missing_goals",
+                    "message": f"{match_label}の得点経過が未入力です（{total_score}点）",
+                    "field": "goals",
+                    "match_id": match.id,
+                })
+            elif total_score != goal_count:
+                warnings.append({
+                    "type": "goal_mismatch",
+                    "message": f"{match_label}の得点経過数（{goal_count}）がスコア合計（{total_score}）と一致しません",
+                    "field": "goals",
+                    "match_id": match.id,
+                })
+
+    return warnings, critical_warnings
+
+
+def _check_final_result_data(db: Session, tournament_id: int):
+    """最終結果報告書の未入力チェック"""
+    from models.award import Award
+    from models.standing import Standing
+
+    warnings = []
+    critical_warnings = []
+
+    # 決勝トーナメント試合のチェック
+    knockout_matches = db.query(Match).filter(
+        Match.tournament_id == tournament_id,
+        Match.stage.in_([MatchStage.SEMIFINAL, MatchStage.THIRD_PLACE, MatchStage.FINAL]),
+    ).all()
+
+    stage_names = {
+        MatchStage.SEMIFINAL: "準決勝",
+        MatchStage.THIRD_PLACE: "3位決定戦",
+        MatchStage.FINAL: "決勝",
+    }
+
+    for match in knockout_matches:
+        stage_name = stage_names.get(match.stage, str(match.stage))
+        if match.status != MatchStatus.COMPLETED:
+            critical_warnings.append({
+                "type": "incomplete_knockout",
+                "message": f"{stage_name}の結果が未入力です",
+                "field": "knockout_result",
+                "match_id": match.id,
+            })
+
+    # 優秀選手のチェック
+    awards = db.query(Award).filter(Award.tournament_id == tournament_id).all()
+    mvp_count = sum(1 for a in awards if a.award_type == 'mvp')
+    outstanding_count = sum(1 for a in awards if a.award_type == 'outstanding')
+
+    if mvp_count == 0:
+        warnings.append({
+            "type": "missing_mvp",
+            "message": "最優秀選手（MVP）が未登録です",
+            "field": "awards",
+        })
+    if outstanding_count < 3:
+        warnings.append({
+            "type": "missing_outstanding",
+            "message": f"優秀選手が{outstanding_count}名のみです（推奨: 3名以上）",
+            "field": "awards",
+        })
+
+    # 最終順位のチェック（1位〜4位）
+    first_places = db.query(Standing).filter(
+        Standing.tournament_id == tournament_id,
+        Standing.rank == 1,
+    ).count()
+    if first_places < 4:
+        warnings.append({
+            "type": "missing_standings",
+            "message": f"グループ1位が{first_places}チームのみです（4チーム必要）",
+            "field": "standings",
+        })
+
+    return warnings, critical_warnings
 
 
 @router.get("/summary/{tournament_id}")

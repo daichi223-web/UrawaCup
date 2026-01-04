@@ -274,3 +274,123 @@ class StandingService:
             Standing.tournament_id == tournament_id,
             Standing.rank == rank,
         ).order_by(Standing.group_id).all()
+
+    def calculate_overall_standings(self, tournament_id: int) -> List[Standing]:
+        """
+        全体順位を計算（順位リーグ用）
+
+        ソート順序:
+        1. グループ内順位
+        2. 勝点
+        3. 得失点差
+        4. 総得点
+        5. ランダム（同成績の場合）
+
+        Returns:
+            全チームを全体順位順にソートしたリスト
+        """
+        import random
+
+        standings = self.db.query(Standing).filter(
+            Standing.tournament_id == tournament_id,
+        ).all()
+
+        # ソート用のキー関数（同成績時はランダム要素を追加）
+        def sort_key(s: Standing) -> Tuple:
+            return (
+                s.rank,                    # グループ内順位（昇順）
+                -s.points,                 # 勝点（降順）
+                -s.goal_difference,        # 得失点差（降順）
+                -s.goals_for,              # 総得点（降順）
+                random.random(),           # 同成績時のランダム決定
+            )
+
+        sorted_standings = sorted(standings, key=sort_key)
+
+        # 全体順位を付与
+        for idx, standing in enumerate(sorted_standings):
+            standing.overall_rank = idx + 1
+
+        return sorted_standings
+
+    def get_position_league_teams(self, tournament_id: int) -> Tuple[List[Standing], List[List[Standing]], List[Dict]]:
+        """
+        順位リーグ用のチーム振り分けを計算
+
+        Returns:
+            (knockout_teams, position_leagues, warnings)
+            - knockout_teams: 決勝T進出チーム（各グループ1位）
+            - position_leagues: 4つの順位リーグ（それぞれチームのリスト）
+            - warnings: 警告情報のリスト
+        """
+        warnings = []
+
+        # 全体順位を計算
+        overall_standings = self.calculate_overall_standings(tournament_id)
+
+        # 決勝T進出チーム（各グループ1位）
+        knockout_teams = [s for s in overall_standings if s.rank == 1]
+
+        # 残りのチーム（2位以下）
+        remaining_teams = [s for s in overall_standings if s.rank > 1]
+
+        # 同成績チームの検出（警告用）
+        self._detect_same_stats_warnings(remaining_teams, warnings)
+
+        # 4つの順位リーグに振り分け
+        position_leagues = self._distribute_to_leagues(remaining_teams, 4)
+
+        # チーム数が不均等な場合の警告
+        league_sizes = [len(league) for league in position_leagues]
+        if len(set(league_sizes)) > 1:
+            warnings.append({
+                'type': 'uneven',
+                'message': 'チーム数が均等でないため、リーグによって試合数が異なります',
+                'details': {f'league{i+1}': size for i, size in enumerate(league_sizes)},
+            })
+
+        return knockout_teams, position_leagues, warnings
+
+    def _detect_same_stats_warnings(self, standings: List[Standing], warnings: List[Dict]):
+        """同成績チームを検出して警告を追加"""
+        # 同じ成績のチームをグループ化
+        stats_groups = {}
+        for s in standings:
+            key = (s.rank, s.points, s.goal_difference, s.goals_for)
+            if key not in stats_groups:
+                stats_groups[key] = []
+            stats_groups[key].append(s)
+
+        # 同成績が複数あるグループを警告
+        for key, group in stats_groups.items():
+            if len(group) > 1:
+                team_names = [s.team.name if s.team else f"Team#{s.team_id}" for s in group]
+                warnings.append({
+                    'type': 'random',
+                    'message': f'同成績のチームがランダムで順位決定されました',
+                    'details': team_names,
+                })
+
+    def _distribute_to_leagues(self, teams: List[Standing], league_count: int = 4) -> List[List[Standing]]:
+        """
+        チームを順位リーグに振り分け
+
+        上位リーグから順に配分し、端数は上位リーグに多めに配分
+        """
+        leagues = [[] for _ in range(league_count)]
+
+        if not teams:
+            return leagues
+
+        # 各リーグの基本サイズ
+        base_size = len(teams) // league_count
+        extra = len(teams) % league_count
+
+        current_idx = 0
+        for i in range(league_count):
+            # 上位リーグに端数を配分
+            size = base_size + (1 if i < extra else 0)
+            leagues[i] = teams[current_idx:current_idx + size]
+            current_idx += size
+
+        return leagues

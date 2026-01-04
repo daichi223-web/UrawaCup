@@ -19,9 +19,13 @@ interface MatchRowProps {
   isRematch?: boolean;
   /** 再戦情報（予選での対戦詳細） */
   rematchInfo?: RematchInfo;
+  /** クリック入れ替えモード用: 選択中のチーム情報 */
+  selectedSlot?: { matchId: number; side: 'home' | 'away' } | null;
+  /** クリック入れ替えモード用: チームスロットクリック時のコールバック */
+  onSlotClick?: (matchId: number, side: 'home' | 'away') => void;
 }
 
-export function MatchRow({ match, onMatchClick, showLabel = false, isRematch = false, rematchInfo }: MatchRowProps) {
+export function MatchRow({ match, onMatchClick, showLabel = false, isRematch = false, rematchInfo, selectedSlot, onSlotClick }: MatchRowProps) {
   const isCompleted = match.status === 'completed';
 
   const handleRowClick = () => {
@@ -92,6 +96,8 @@ export function MatchRow({ match, onMatchClick, showLabel = false, isRematch = f
               side="home"
               team={match.homeTeam}
               disabled={isCompleted}
+              isSelected={selectedSlot?.matchId === match.id && selectedSlot?.side === 'home'}
+              onClick={onSlotClick ? () => onSlotClick(match.id, 'home') : undefined}
             />
             <span className="text-gray-400 text-sm">-</span>
             <DraggableTeamSlot
@@ -99,6 +105,8 @@ export function MatchRow({ match, onMatchClick, showLabel = false, isRematch = f
               side="away"
               team={match.awayTeam}
               disabled={isCompleted}
+              isSelected={selectedSlot?.matchId === match.id && selectedSlot?.side === 'away'}
+              onClick={onSlotClick ? () => onSlotClick(match.id, 'away') : undefined}
             />
           </div>
           {/* 再戦警告 */}

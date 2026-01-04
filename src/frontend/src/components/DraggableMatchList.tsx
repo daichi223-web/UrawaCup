@@ -291,7 +291,7 @@ export default function DraggableMatchList({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">{title}</h3>
           <div className="text-sm text-gray-500">
-            チームをドラッグして入れ替え可能
+            チームをクリックして入れ替え可能
           </div>
         </div>
       )}
@@ -359,7 +359,7 @@ export default function DraggableMatchList({
       </DndContext>
 
       <div className="text-xs text-gray-400 text-center mt-4">
-        ※ チームをドラッグして別の位置にドロップすると組み合わせが変更されます
+        ※ チームをクリックして選択後、別のチームをクリックすると入れ替わります
       </div>
     </div>
   )

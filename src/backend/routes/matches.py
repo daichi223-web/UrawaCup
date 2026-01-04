@@ -803,15 +803,19 @@ def generate_training_matches(
     tournament_id: int,
     match_date: date = Query(..., description="試合日（通常Day3）"),
     start_time: time = Query(time(9, 0), description="開始時刻"),
-    min_venues: int = Query(1, ge=1, le=10, description="必要な会場数（デフォルト1）"),
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
     """
-    研修試合の組み合わせを自動生成（管理者専用）
+    研修試合（順位リーグ）の組み合わせを自動生成（管理者専用）
 
-    各グループの2〜6位チームで、同順位同士かつ予選リーグで未対戦のペアを組み合わせる。
+    【順位リーグ方式】
+    1. 全体順位を計算（グループ内順位→勝点→得失点差→総得点→ランダム）
+    2. 各グループ1位を除いた残りチームを4つの順位リーグに振り分け
+    3. 各リーグ内で総当たり戦を生成
     """
+    from services.standing_service import StandingService
+
     # 大会の存在確認
     tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
     if not tournament:
@@ -820,7 +824,24 @@ def generate_training_matches(
             detail=f"大会が見つかりません (ID: {tournament_id})"
         )
 
-    # 予選リーグの対戦履歴を取得
+    # 順位リーグ用の会場を取得（決勝会場以外で最終日用）
+    training_venues = db.query(Venue).filter(
+        Venue.tournament_id == tournament_id,
+        Venue.for_final_day == True,
+        Venue.is_finals_venue == False,
+    ).order_by(Venue.id).all()
+
+    if len(training_venues) < 4:
+        all_venues = db.query(Venue).filter(Venue.tournament_id == tournament_id).all()
+        venue_info = [f"{v.name}(for_final_day={v.for_final_day}, is_finals_venue={v.is_finals_venue})" for v in all_venues]
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"順位リーグ用の会場が不足しています。必要: 4会場, 現在: {len(training_venues)}会場。"
+                   f"設定画面で会場の「最終日の順位リーグ会場として使用」にチェックを入れてください。"
+                   f"（決勝会場は除外されます）現在の会場: {venue_info}"
+        )
+
+    # 予選リーグの対戦履歴を取得（再戦チェック用）
     preliminary_matches = db.query(Match).filter(
         Match.tournament_id == tournament_id,
         Match.stage == MatchStage.PRELIMINARY,
@@ -828,87 +849,105 @@ def generate_training_matches(
 
     played_pairs = set()
     for m in preliminary_matches:
-        played_pairs.add((m.home_team_id, m.away_team_id))
-        played_pairs.add((m.away_team_id, m.home_team_id))
+        pair = tuple(sorted([m.home_team_id, m.away_team_id]))
+        played_pairs.add(pair)
 
-    # 各グループの順位を取得
-    from models.standing import Standing
-    standings = db.query(Standing).filter(
-        Standing.tournament_id == tournament_id,
-    ).order_by(Standing.group_id, Standing.rank).all()
-
-    # 順位ごとにチームをグループ化
-    rank_teams = {}  # {rank: [(team_id, group_id), ...]}
-    for s in standings:
-        if s.rank >= 2:  # 2位以下が研修試合対象
-            if s.rank not in rank_teams:
-                rank_teams[s.rank] = []
-            rank_teams[s.rank].append((s.team_id, s.group_id))
-
-    # 研修試合用の会場を取得（決勝会場以外で最終日用）
-    training_venues = db.query(Venue).filter(
-        Venue.tournament_id == tournament_id,
-        Venue.for_final_day == True,
-        Venue.is_finals_venue == False,  # 決勝会場以外
-    ).all()
-
-    if len(training_venues) < min_venues:
-        # 利用可能な全会場を取得してエラーメッセージに含める
-        all_venues = db.query(Venue).filter(Venue.tournament_id == tournament_id).all()
-        venue_info = [f"{v.name}(for_final_day={v.for_final_day}, is_finals_venue={v.is_finals_venue})" for v in all_venues]
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"研修試合用の会場が不足しています。必要: {min_venues}会場, 現在: {len(training_venues)}会場。"
-                   f"設定画面で会場の「最終日の順位リーグ会場として使用」にチェックを入れてください。"
-                   f"（決勝会場は除外されます）現在の会場: {venue_info}"
-        )
+    # StandingServiceを使用して順位リーグ振り分けを取得
+    standing_service = StandingService(db)
+    knockout_teams, position_leagues, warnings = standing_service.get_position_league_teams(tournament_id)
 
     created_matches = []
     match_interval = tournament.match_duration + tournament.interval_minutes
-    venue_match_count = {v.id: 0 for v in training_venues}
+    rematch_warnings = []
 
-    for rank in sorted(rank_teams.keys()):
-        teams = rank_teams[rank]
+    # 総当たり対戦順序の定義
+    def get_round_robin_pairs(team_count: int) -> list:
+        """チーム数に応じた総当たり対戦順序を返す"""
+        if team_count == 5:
+            return [(0, 1), (2, 3), (0, 4), (1, 2), (3, 4),
+                    (0, 2), (1, 3), (2, 4), (0, 3), (1, 4)]
+        elif team_count == 4:
+            return [(0, 1), (2, 3), (0, 2), (1, 3), (0, 3), (1, 2)]
+        elif team_count == 3:
+            return [(0, 1), (0, 2), (1, 2)]
+        elif team_count == 2:
+            return [(0, 1)]
+        else:
+            # 一般的な総当たり
+            pairs = []
+            for i in range(team_count):
+                for j in range(i + 1, team_count):
+                    pairs.append((i, j))
+            return pairs
 
-        # 同順位同士で未対戦のペアを探す
-        for i, (team1_id, group1) in enumerate(teams):
-            for team2_id, group2 in teams[i + 1:]:
-                if group1 == group2:
-                    continue  # 同一グループは除外
-                if (team1_id, team2_id) in played_pairs:
-                    continue  # 対戦済みは除外
+    # 各順位リーグで総当たり戦を生成
+    for league_idx, league_teams in enumerate(position_leagues):
+        if not league_teams:
+            continue
 
-                # 試合数の少ない会場を選択
-                venue_id = min(venue_match_count, key=venue_match_count.get)
-                match_order = venue_match_count[venue_id] + 1
+        venue = training_venues[league_idx] if league_idx < len(training_venues) else training_venues[-1]
+        team_count = len(league_teams)
+        pairs = get_round_robin_pairs(team_count)
 
-                match_time = (
-                    datetime.combine(date.today(), start_time) +
-                    timedelta(minutes=(match_order - 1) * match_interval)
-                ).time()
+        # 順位リーグの順位範囲を計算（表示用）
+        first_rank = getattr(league_teams[0], 'overall_rank', league_idx * 5 + 5) if league_teams else 0
+        last_rank = getattr(league_teams[-1], 'overall_rank', first_rank + team_count - 1) if league_teams else 0
+        rank_range = f"{first_rank}〜{last_rank}位"
 
-                match = Match(
-                    tournament_id=tournament_id,
-                    group_id=None,
-                    venue_id=venue_id,
-                    home_team_id=team1_id,
-                    away_team_id=team2_id,
-                    match_date=match_date,
-                    match_time=match_time,
-                    match_order=match_order,
-                    stage=MatchStage.TRAINING,
-                    status=MatchStatus.SCHEDULED,
-                    notes=f"{rank}位研修試合",
-                )
-                db.add(match)
-                created_matches.append(match)
+        for match_order, (i, j) in enumerate(pairs, 1):
+            if i >= len(league_teams) or j >= len(league_teams):
+                continue
 
-                venue_match_count[venue_id] += 1
+            team1 = league_teams[i]
+            team2 = league_teams[j]
+
+            # 再戦チェック
+            pair_key = tuple(sorted([team1.team_id, team2.team_id]))
+            is_rematch = pair_key in played_pairs
+
+            if is_rematch:
+                rematch_warnings.append({
+                    'type': 'rematch',
+                    'league': league_idx + 1,
+                    'teams': [
+                        team1.team.name if team1.team else f"Team#{team1.team_id}",
+                        team2.team.name if team2.team else f"Team#{team2.team_id}",
+                    ],
+                })
+
+            match_time = (
+                datetime.combine(date.today(), start_time) +
+                timedelta(minutes=(match_order - 1) * match_interval)
+            ).time()
+
+            match = Match(
+                tournament_id=tournament_id,
+                group_id=None,
+                venue_id=venue.id,
+                home_team_id=team1.team_id,
+                away_team_id=team2.team_id,
+                match_date=match_date,
+                match_time=match_time,
+                match_order=match_order,
+                stage=MatchStage.TRAINING,
+                status=MatchStatus.SCHEDULED,
+                notes=f"順位リーグ{league_idx + 1}（{rank_range}）" + (" ⚠️再戦" if is_rematch else ""),
+            )
+            db.add(match)
+            created_matches.append(match)
 
     db.commit()
 
     for match in created_matches:
         db.refresh(match)
+
+    # 警告がある場合はログ出力（将来的にはレスポンスに含める）
+    all_warnings = warnings + rematch_warnings
+    if all_warnings:
+        import logging
+        logger = logging.getLogger(__name__)
+        for w in all_warnings:
+            logger.warning(f"順位リーグ生成警告: {w}")
 
     return MatchList(matches=created_matches, total=len(created_matches))
 
@@ -992,33 +1031,33 @@ def generate_final_matches(
     match_interval = tournament.match_duration + tournament.interval_minutes
 
     # 決勝トーナメントの試合を作成
-    # 準決勝1: A1位 vs B1位
-    # 準決勝2: C1位 vs D1位
+    # 準決勝1: A1位 vs C1位（対角グループ対戦）
+    # 準決勝2: B1位 vs D1位（対角グループ対戦）
     # 3位決定戦: 準決勝敗者同士（後で手動設定またはスコア入力後に更新）
     # 決勝: 準決勝勝者同士（後で手動設定またはスコア入力後に更新）
     created_matches = []
 
-    # 準決勝1 (第1試合)
+    # 準決勝1 (第1試合): A1位 vs C1位
     sf1_time = start_time
     semifinal1 = Match(
         tournament_id=tournament_id,
         group_id=None,
         venue_id=final_venue.id,
         home_team_id=qualified_teams["A"],
-        away_team_id=qualified_teams["B"],
+        away_team_id=qualified_teams["C"],
         match_date=match_date,
         match_time=sf1_time,
         match_order=1,
         stage=MatchStage.SEMIFINAL,
         status=MatchStatus.SCHEDULED,
         home_seed="A1位",
-        away_seed="B1位",
-        notes="準決勝1: A組1位 vs B組1位",
+        away_seed="C1位",
+        notes="準決勝1: A組1位 vs C組1位",
     )
     db.add(semifinal1)
     created_matches.append(semifinal1)
 
-    # 準決勝2 (第2試合)
+    # 準決勝2 (第2試合): B1位 vs D1位
     sf2_time = (
         datetime.combine(date.today(), start_time) +
         timedelta(minutes=match_interval)
@@ -1027,22 +1066,22 @@ def generate_final_matches(
         tournament_id=tournament_id,
         group_id=None,
         venue_id=final_venue.id,
-        home_team_id=qualified_teams["C"],
+        home_team_id=qualified_teams["B"],
         away_team_id=qualified_teams["D"],
         match_date=match_date,
         match_time=sf2_time,
         match_order=2,
         stage=MatchStage.SEMIFINAL,
         status=MatchStatus.SCHEDULED,
-        home_seed="C1位",
+        home_seed="B1位",
         away_seed="D1位",
-        notes="準決勝2: C組1位 vs D組1位",
+        notes="準決勝2: B組1位 vs D組1位",
     )
     db.add(semifinal2)
     created_matches.append(semifinal2)
 
     # 3位決定戦 (第3試合) - チームは準決勝後に決まるのでプレースホルダーとして作成
-    # ※初期値として準決勝1のホーム vs 準決勝2のホームを設定（後で変更可能）
+    # ※初期値として準決勝1のホーム(A) vs 準決勝2のホーム(B)を設定（後で変更可能）
     third_time = (
         datetime.combine(date.today(), start_time) +
         timedelta(minutes=match_interval * 2)
@@ -1052,7 +1091,7 @@ def generate_final_matches(
         group_id=None,
         venue_id=final_venue.id,
         home_team_id=qualified_teams["A"],  # プレースホルダー（準決勝1敗者）
-        away_team_id=qualified_teams["C"],  # プレースホルダー（準決勝2敗者）
+        away_team_id=qualified_teams["B"],  # プレースホルダー（準決勝2敗者）
         match_date=match_date,
         match_time=third_time,
         match_order=3,
@@ -1064,6 +1103,7 @@ def generate_final_matches(
     created_matches.append(third_place)
 
     # 決勝 (第4試合) - チームは準決勝後に決まるのでプレースホルダーとして作成
+    # ※初期値として準決勝1のアウェイ(C) vs 準決勝2のアウェイ(D)を設定（後で変更可能）
     final_time = (
         datetime.combine(date.today(), start_time) +
         timedelta(minutes=match_interval * 3)
@@ -1072,7 +1112,7 @@ def generate_final_matches(
         tournament_id=tournament_id,
         group_id=None,
         venue_id=final_venue.id,
-        home_team_id=qualified_teams["B"],  # プレースホルダー（準決勝1勝者）
+        home_team_id=qualified_teams["C"],  # プレースホルダー（準決勝1勝者）
         away_team_id=qualified_teams["D"],  # プレースホルダー（準決勝2勝者）
         match_date=match_date,
         match_time=final_time,

@@ -1,19 +1,7 @@
 // src/pages/FinalDaySchedule.tsx
-// 最終日組み合わせ画面
+// 最終日組み合わせ画面（クリック入れ替え方式）
 
 import { useState, useMemo, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
 import { RefreshCw, Save, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -21,7 +9,6 @@ import {
   VenueCard,
   KnockoutCard,
   MatchEditModal,
-  TeamSlotPreview,
   PlayedWarningDialog,
 } from '@/features/final-day/components';
 import {
@@ -35,13 +22,19 @@ import {
 } from '@/features/final-day/hooks';
 import type {
   FinalMatch,
-  DragItem,
-  DropTarget,
   VenueSchedule,
 } from '@/features/final-day/types';
 import { useTeams } from '@/features/teams/hooks';
 import { useVenuesByTournament, useUpdateVenue } from '@/features/venues/hooks';
 import { useAppStore } from '@/stores/appStore';
+
+// クリック入れ替え用の型
+interface SwapSlot {
+  matchId: number;
+  side: 'home' | 'away';
+  teamId?: number;
+  displayName: string;
+}
 
 export default function FinalDaySchedule() {
   const { currentTournament } = useAppStore();
@@ -64,13 +57,15 @@ export default function FinalDaySchedule() {
   const updateVenue = useUpdateVenue();
 
   // ローカルステート
-  const [activeItem, setActiveItem] = useState<DragItem | null>(null);
   const [editingMatch, setEditingMatch] = useState<FinalMatch | null>(null);
+
+  // クリック入れ替えモード用ステート
+  const [selectedSlot, setSelectedSlot] = useState<SwapSlot | null>(null);
 
   // 対戦済み警告用ステート
   const [pendingSwap, setPendingSwap] = useState<{
-    from: DragItem;
-    to: DropTarget;
+    from: SwapSlot;
+    to: SwapSlot;
     playedInfo: {
       team1Name: string;
       team2Name: string;
@@ -80,20 +75,8 @@ export default function FinalDaySchedule() {
   } | null>(null);
   const checkPlayed = useCheckPlayed(tournamentId);
 
-  // センサー設定（マウス＆タッチ対応）
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 5,
-      },
-    })
-  );
+  // 連打防止用ref
+  const swappingRef = useRef<Set<number>>(new Set());
 
   // 試合を会場別・種別別に分類
   const { trainingVenues, knockoutMatches, knockoutVenueName } = useMemo(() => {
@@ -147,95 +130,8 @@ export default function FinalDaySchedule() {
     };
   }, [allMatches, venues, teams]);
 
-  // ドラッグ開始
-  const handleDragStart = (event: DragStartEvent) => {
-    const data = event.active.data.current as DragItem;
-    setActiveItem(data);
-  };
-
-  // ドラッグ終了（ドロップ時）
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveItem(null);
-
-    if (!over) return;
-
-    const dragItem = active.data.current as DragItem;
-    const dropTarget = over.data.current as DropTarget;
-
-    // 同じ場所にドロップした場合は何もしない
-    if (
-      dragItem.matchId === dropTarget.matchId &&
-      dragItem.side === dropTarget.side
-    ) {
-      return;
-    }
-
-    // 入れ替え後に同じ試合になるチームIDを取得
-    const team1Id = dragItem.team.teamId;
-    const team2Id = dropTarget.team?.teamId;
-
-    // 両方のチームIDがある場合、対戦済みかチェック
-    if (team1Id && team2Id) {
-      try {
-        const result = await checkPlayed.mutateAsync({ team1Id, team2Id });
-        if (result.played) {
-          // 対戦済みの場合、警告ダイアログを表示
-          const score = result.homeScore !== null && result.awayScore !== null
-            ? `${result.homeScore}-${result.awayScore}`
-            : null;
-          setPendingSwap({
-            from: dragItem,
-            to: dropTarget,
-            playedInfo: {
-              team1Name: dragItem.team.displayName,
-              team2Name: dropTarget.team?.displayName || '不明',
-              matchDate: result.matchDate,
-              score,
-            },
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to check played:', error);
-        // チェック失敗時は続行
-      }
-    }
-
-    // チーム入れ替え実行
-    handleSwapTeams(dragItem, dropTarget);
-  };
-
-  // 警告ダイアログで強制確定
-  const handleForceSwap = () => {
-    if (pendingSwap) {
-      handleSwapTeams(pendingSwap.from, pendingSwap.to);
-      setPendingSwap(null);
-    }
-  };
-
-  // 警告ダイアログをキャンセル
-  const handleCancelSwap = () => {
-    setPendingSwap(null);
-  };
-
-  // 準決勝結果を3決・決勝に反映
-  const handleUpdateBracket = async () => {
-    try {
-      await updateFinalsBracket.mutateAsync();
-      toast.success('準決勝結果を反映しました');
-      refetch();
-    } catch (error) {
-      console.error('Failed to update bracket:', error);
-      toast.error('結果反映に失敗しました');
-    }
-  };
-
-  // 連打防止用ref（Set型で複数試合の並列管理に対応）
-  const swappingRef = useRef<Set<number>>(new Set());
-
-  // チーム入れ替え
-  const handleSwapTeams = async (from: DragItem, to: DropTarget) => {
+  // チーム入れ替え実行
+  const executeSwap = async (from: SwapSlot, to: SwapSlot) => {
     // 同じ試合に対する重複呼び出しを防止
     if (swappingRef.current.has(from.matchId)) {
       console.log('[SwapTeams] 重複呼び出しをスキップ:', from.matchId);
@@ -259,6 +155,92 @@ export default function FinalDaySchedule() {
       setTimeout(() => {
         swappingRef.current.delete(from.matchId);
       }, 500);
+    }
+  };
+
+  // クリック入れ替えモード: チームスロットクリック時
+  const handleSlotClick = async (matchId: number, side: 'home' | 'away') => {
+    // クリックされたスロットの情報を取得
+    const match = allMatches?.find(m => m.id === matchId);
+    if (!match) return;
+
+    const clickedTeam = side === 'home' ? match.homeTeam : match.awayTeam;
+    const clickedSlot: SwapSlot = {
+      matchId,
+      side,
+      teamId: clickedTeam.teamId,
+      displayName: clickedTeam.displayName,
+    };
+
+    // 選択解除
+    if (selectedSlot?.matchId === matchId && selectedSlot?.side === side) {
+      setSelectedSlot(null);
+      return;
+    }
+
+    // 既に選択中のスロットがある場合は入れ替え実行
+    if (selectedSlot) {
+      const team1Id = selectedSlot.teamId;
+      const team2Id = clickedSlot.teamId;
+
+      // 対戦済みチェック
+      if (team1Id && team2Id) {
+        try {
+          const result = await checkPlayed.mutateAsync({ team1Id, team2Id });
+          if (result.played) {
+            const score = result.homeScore !== null && result.awayScore !== null
+              ? `${result.homeScore}-${result.awayScore}`
+              : null;
+            setPendingSwap({
+              from: selectedSlot,
+              to: clickedSlot,
+              playedInfo: {
+                team1Name: selectedSlot.displayName,
+                team2Name: clickedSlot.displayName,
+                matchDate: result.matchDate,
+                score,
+              },
+            });
+            setSelectedSlot(null);
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to check played:', error);
+        }
+      }
+
+      // 入れ替え実行
+      executeSwap(selectedSlot, clickedSlot);
+      setSelectedSlot(null);
+      return;
+    }
+
+    // 最初のクリック: 選択状態にする
+    setSelectedSlot(clickedSlot);
+  };
+
+  // 警告ダイアログで強制確定
+  const handleForceSwap = () => {
+    if (pendingSwap) {
+      executeSwap(pendingSwap.from, pendingSwap.to);
+      setPendingSwap(null);
+    }
+  };
+
+  // 警告ダイアログをキャンセル
+  const handleCancelSwap = () => {
+    setPendingSwap(null);
+  };
+
+  // 準決勝結果を3決・決勝に反映
+  const handleUpdateBracket = async () => {
+    try {
+      await updateFinalsBracket.mutateAsync();
+      toast.success('準決勝結果を反映しました');
+      refetch();
+    } catch (error) {
+      console.error('Failed to update bracket:', error);
+      toast.error('結果反映に失敗しました');
     }
   };
 
@@ -367,62 +349,59 @@ export default function FinalDaySchedule() {
 
       {/* ヒント */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-sm text-blue-800">
-        チームをドラッグして別のチーム枠にドロップすると、チームを入れ替えられます。
-        試合行をクリックすると詳細を編集できます。
+        {selectedSlot ? (
+          <span className="font-medium text-blue-900">
+            「{selectedSlot.displayName}」を選択中 - 入れ替え先のチームをクリックしてください（キャンセル: 同じチームを再クリック）
+          </span>
+        ) : (
+          <>
+            チームをクリックして選択後、別のチームをクリックで入れ替えできます。
+            試合行をクリックすると詳細を編集できます。
+          </>
+        )}
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        {/* 順位リーグ（研修試合） */}
-        <section className="mb-8">
-          <h2 className="text-lg font-semibold mb-3 pb-2 border-b">
-            【順位リーグ】
-          </h2>
-          {trainingVenues.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {trainingVenues.map((venue) => (
-                <VenueCard
-                  key={venue.id}
-                  venue={venue}
-                  teams={teams}
-                  onMatchClick={setEditingMatch}
-                  onManagerChange={handleManagerChange}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
-              研修試合がありません。「自動生成」ボタンで生成してください。
-            </div>
-          )}
-        </section>
-
-        {/* 決勝トーナメント */}
-        <section>
-          <h2 className="text-lg font-semibold mb-3 pb-2 border-b">
-            【3決・決勝戦】
-          </h2>
-          <KnockoutCard
-            venueName={knockoutVenueName}
-            matches={knockoutMatches}
-            onMatchClick={setEditingMatch}
-            onUpdateBracket={handleUpdateBracket}
-            isUpdating={updateFinalsBracket.isPending}
-          />
-        </section>
-
-        {/* ドラッグ中のオーバーレイ（createPortalでbodyに描画してオフセット問題を解消） */}
-        {createPortal(
-          <DragOverlay dropAnimation={null}>
-            {activeItem && <TeamSlotPreview team={activeItem.team} />}
-          </DragOverlay>,
-          document.body
+      {/* 順位リーグ（研修試合） */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-3 pb-2 border-b">
+          【順位リーグ】
+        </h2>
+        {trainingVenues.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {trainingVenues.map((venue) => (
+              <VenueCard
+                key={venue.id}
+                venue={venue}
+                teams={teams}
+                onMatchClick={setEditingMatch}
+                onManagerChange={handleManagerChange}
+                selectedSlot={selectedSlot}
+                onSlotClick={handleSlotClick}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+            研修試合がありません。「自動生成」ボタンで生成してください。
+          </div>
         )}
-      </DndContext>
+      </section>
+
+      {/* 決勝トーナメント */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 pb-2 border-b">
+          【3決・決勝戦】
+        </h2>
+        <KnockoutCard
+          venueName={knockoutVenueName}
+          matches={knockoutMatches}
+          onMatchClick={setEditingMatch}
+          onUpdateBracket={handleUpdateBracket}
+          isUpdating={updateFinalsBracket.isPending}
+          selectedSlot={selectedSlot}
+          onSlotClick={handleSlotClick}
+        />
+      </section>
 
       {/* 編集モーダル */}
       {editingMatch && (

@@ -237,10 +237,10 @@ function MatchCard({ match, title, onClick, onSwapTeams, className = '', draggab
         </div>
       )}
 
-      {/* ドラッグ可能表示 */}
+      {/* 入れ替え可能表示 */}
       {canDrag && (
         <div className="mt-2 text-xs text-center text-gray-400">
-          チームをドラッグして入れ替え可能
+          クリックで入れ替え可能
         </div>
       )}
     </div>
@@ -543,7 +543,7 @@ export default function FinalsBracket({
             {onSwapTeams && (
               <div className="flex items-center gap-2">
                 <GripVertical className="w-4 h-4 text-gray-400" />
-                <span>ドラッグで入れ替え</span>
+                <span>クリックで入れ替え</span>
               </div>
             )}
           </div>

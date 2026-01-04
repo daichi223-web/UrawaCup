@@ -85,15 +85,18 @@ export interface UseWebSocketReturn {
 
 // WebSocketのURLを取得
 function getWebSocketUrl(): string {
-  // 環境変数からURLを取得（設定されていない場合はデフォルト値）
+  // 環境変数からURLを取得
   const wsBaseUrl = import.meta.env.VITE_WS_URL;
-  if (wsBaseUrl) {
+
+  // 絶対URLの場合（ws:// または wss:// で始まる）
+  if (wsBaseUrl && (wsBaseUrl.startsWith('ws://') || wsBaseUrl.startsWith('wss://'))) {
     return wsBaseUrl;
   }
 
-  // 現在のホストを使用（Viteプロキシ経由）
+  // 相対パスまたは未設定の場合は、現在のホストを使用（Viteプロキシ経由）
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws`;
+  const path = wsBaseUrl || '/ws';
+  return `${protocol}//${window.location.host}${path}`;
 }
 
 /**
