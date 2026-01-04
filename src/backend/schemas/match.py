@@ -71,6 +71,10 @@ class MatchUpdate(CamelCaseModel):
     stage: Optional[MatchStage] = None
     status: Optional[MatchStatus] = None
     notes: Optional[str] = Field(None, max_length=500)
+    # 運営担当（Final Day用）
+    referee_main: Optional[str] = Field(None, max_length=100, description="主審")
+    referee_assistant: Optional[str] = Field(None, max_length=100, description="副審")
+    venue_manager: Optional[str] = Field(None, max_length=100, description="会場運営担当")
 
 
 class MatchScoreInput(CamelCaseModel):
@@ -119,6 +123,10 @@ class MatchResponse(CamelCaseModel):
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
     notes: Optional[str]
+    # 運営担当（Final Day用）
+    referee_main: Optional[str] = None
+    referee_assistant: Optional[str] = None
+    venue_manager: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

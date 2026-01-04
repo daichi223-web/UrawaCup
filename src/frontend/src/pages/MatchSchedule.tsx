@@ -369,6 +369,7 @@ function MatchSchedule() {
             key="preliminary"
             className="btn-primary"
             onClick={() => openGenerateModal('preliminary')}
+            disabled={isGenerating}
           >
             予選リーグ日程を生成
           </button>
@@ -382,6 +383,7 @@ function MatchSchedule() {
             key="finals"
             className="btn-primary"
             onClick={() => openGenerateModal('finals')}
+            disabled={isGenerating}
           >
             決勝トーナメント生成
           </button>
@@ -393,6 +395,7 @@ function MatchSchedule() {
             key="training"
             className="btn-secondary"
             onClick={() => openGenerateModal('training')}
+            disabled={isGenerating}
           >
             研修試合生成
           </button>
